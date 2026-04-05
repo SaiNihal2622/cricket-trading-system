@@ -1,0 +1,89 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Barlow+Condensed:wght@400;500;600;700;800&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg-base:     #070b10;
+  --bg-panel:    #0d1520;
+  --bg-card:     #111d2b;
+  --bg-hover:    #162436;
+  --border:      #1e3048;
+  --border-bright: #2a4a6e;
+
+  --text-primary:   #e2edf8;
+  --text-secondary: #7a9ab8;
+  --text-dim:       #3d5c78;
+
+  --green:   #00e676;
+  --green-dim: #00522a;
+  --red:     #ff3d5a;
+  --red-dim:   #5a0014;
+  --amber:   #ffb300;
+  --amber-dim: #4a3200;
+  --blue:    #00b4d8;
+  --purple:  #7c4dff;
+  --cyan:    #00e5ff;
+
+  --signal-enter:   #00e676;
+  --signal-losscut: #ff3d5a;
+  --signal-bookset: #ffb300;
+  --signal-session: #00b4d8;
+  --signal-hold:    #7a9ab8;
+
+  --font-mono: 'JetBrains Mono', monospace;
+  --font-display: 'Barlow Condensed', sans-serif;
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+
+  --shadow-panel: 0 4px 24px rgba(0,0,0,0.5);
+  --glow-green: 0 0 12px rgba(0,230,118,0.25);
+  --glow-red:   0 0 12px rgba(255,61,90,0.25);
+  --glow-amber: 0 0 12px rgba(255,179,0,0.25);
+}
+
+html, body, #root {
+  height: 100%;
+  background: var(--bg-base);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.5;
+  overflow: hidden;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: var(--bg-base); }
+::-webkit-scrollbar-thumb { background: var(--border-bright); border-radius: 2px; }
+
+/* Utilities */
+.mono { font-family: var(--font-mono); }
+.display { font-family: var(--font-display); }
+.text-green { color: var(--green); }
+.text-red { color: var(--red); }
+.text-amber { color: var(--amber); }
+.text-blue { color: var(--blue); }
+.text-dim { color: var(--text-secondary); }
+
+/* Pulse animation for live indicator */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes flash {
+  0% { background: rgba(0,230,118,0.15); }
+  100% { background: transparent; }
+}
+@keyframes ticker {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+.animate-in { animation: slideIn 0.2s ease; }
+.live-pulse { animation: pulse 1.5s ease-in-out infinite; }

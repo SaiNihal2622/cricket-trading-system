@@ -1,0 +1,385 @@
+"""
+XGBoost Cricket Win Probability Model
+Features: overs, runs, wickets, run_rate, player stats, venue stats
+Output: win probability + momentum score
+"""
+import os
+import logging
+import pickle
+import numpy as np
+import pandas as pd
+from typing import Optional, Tuple
+from dataclasses import dataclass
+
+logger = logging.getLogger(__name__)
+
+
+@dataclass
+class MLPrediction:
+    win_probability: float
+    momentum_score: float
+    feature_importance: dict
+    confidence: float
+    model_version: str = "xgb_v1"
+
+
+class FeatureEngineering:
+    """Transforms raw match state into ML features"""
+
+    FEATURE_NAMES = [
+        # Match state
+        "overs_completed",
+        "runs_scored",
+        "wickets_fallen",
+        "current_run_rate",
+        "required_run_rate",
+        "rr_differential",
+        "balls_remaining",
+        "target",
+        "runs_needed",
+
+        # Phase features
+        "is_powerplay",
+        "is_middle_overs",
+        "is_death_overs",
+        "over_bucket",
+
+        # Wicket features
+        "wickets_in_pp",
+        "wickets_per_10_overs",
+        "top_order_intact",
+
+        # Run rate features
+        "run_rate_acceleration",
+        "pp_run_rate",
+        "boundary_rate",
+
+        # Pressure index
+        "pressure_index",
+        "momentum_indicator",
+
+        # Venue
+        "venue_avg_score",
+        "venue_pp_avg",
+
+        # Team strength (encoded)
+        "batting_team_strength",
+        "bowling_team_strength",
+
+        # Score projections
+        "projected_score",
+        "score_vs_par",
+    ]
+
+    def extract(self, state: dict) -> np.ndarray:
+        """Extract features from match state dict"""
+        overs = float(state.get("overs", 0))
+        runs = int(state.get("total_runs", 0))
+        wickets = int(state.get("total_wickets", 0))
+        crr = float(state.get("run_rate", 0))
+        rrr = float(state.get("required_run_rate", 0))
+        target = int(state.get("target", 0))
+        innings = int(state.get("innings", 1))
+        pp_runs = int(state.get("powerplay_runs", 0))
+
+        # Derived features
+        balls_done = int(overs) * 6 + round((overs % 1) * 10)
+        balls_remaining = max(0, 120 - balls_done)
+        runs_needed = max(0, target - runs) if target > 0 else 0
+        rr_diff = crr - rrr if rrr > 0 else 0
+
+        # Phase flags
+        is_pp = 1 if overs <= 6 else 0
+        is_middle = 1 if 6 < overs <= 15 else 0
+        is_death = 1 if overs > 15 else 0
+        over_bucket = int(overs // 5)
+
+        # Wicket features
+        wickets_per_10 = wickets / max(overs, 1) * 10
+        top_order_intact = 1 if wickets <= 2 else 0
+        wickets_in_pp = min(wickets, pp_runs // 30) if overs <= 6 else 0  # approx
+
+        # Pressure index (high = under pressure)
+        if innings == 2 and rrr > 0:
+            pressure = min(1, (rrr - crr + wickets * 0.5) / 10)
+        else:
+            pressure = wickets * 0.1
+        pressure = max(0, min(1, pressure))
+
+        # Momentum (recent run rate vs match average)
+        match_avg_rr = runs / max(overs, 0.1)
+        momentum = min(1, max(0, (crr - match_avg_rr + 2) / 4))
+
+        # Projection
+        projected_score = runs + (crr * (20 - overs)) if overs < 20 else runs
+        par_score = 165  # T20 average par
+        score_vs_par = (projected_score - par_score) / par_score
+
+        # Venue (defaulting to average values)
+        venue_avg = float(state.get("venue_avg_score", 165))
+        venue_pp_avg = float(state.get("venue_pp_avg", 52))
+
+        # Team strengths (1.0 = average)
+        batting_str = float(state.get("batting_team_strength", 1.0))
+        bowling_str = float(state.get("bowling_team_strength", 1.0))
+
+        # Boundary rate
+        boundary_rate = float(state.get("boundary_rate", 0.25))
+
+        # PP run rate
+        pp_rr = (pp_runs / 6) if overs >= 6 else (runs / max(overs, 0.1))
+
+        features = [
+            overs,                  # 0
+            runs,                   # 1
+            wickets,                # 2
+            crr,                    # 3
+            rrr,                    # 4
+            rr_diff,                # 5
+            balls_remaining,        # 6
+            target,                 # 7
+            runs_needed,            # 8
+            is_pp,                  # 9
+            is_middle,              # 10
+            is_death,               # 11
+            over_bucket,            # 12
+            wickets_in_pp,          # 13
+            wickets_per_10,         # 14
+            top_order_intact,       # 15
+            0.0,                    # 16 run_rate_acceleration (needs prev state)
+            pp_rr,                  # 17
+            boundary_rate,          # 18
+            pressure,               # 19
+            momentum,               # 20
+            venue_avg,              # 21
+            venue_pp_avg,           # 22
+            batting_str,            # 23
+            bowling_str,            # 24
+            projected_score,        # 25
+            score_vs_par,           # 26
+        ]
+
+        return np.array(features, dtype=np.float32)
+
+    def extract_batch(self, states: list[dict]) -> np.ndarray:
+        """Extract features from a list of states"""
+        return np.vstack([self.extract(s) for s in states])
+
+
+class CricketMLModel:
+    """
+    XGBoost win probability model.
+    Falls back to statistical heuristic when model file not found.
+    """
+
+    def __init__(self, model_path: str = "", scaler_path: str = ""):
+        self.model = None
+        self.scaler = None
+        self.feature_eng = FeatureEngineering()
+        self._model_loaded = False
+
+        if model_path and os.path.exists(model_path):
+            self._load_model(model_path, scaler_path)
+
+    def _load_model(self, model_path: str, scaler_path: str):
+        try:
+            with open(model_path, "rb") as f:
+                self.model = pickle.load(f)
+            if scaler_path and os.path.exists(scaler_path):
+                with open(scaler_path, "rb") as f:
+                    self.scaler = pickle.load(f)
+            self._model_loaded = True
+            logger.info(f"XGBoost model loaded from {model_path}")
+        except Exception as e:
+            logger.warning(f"Could not load ML model: {e}. Using heuristic fallback.")
+
+    def predict(self, match_state: dict) -> MLPrediction:
+        """
+        Predict win probability and momentum score.
+        Uses XGBoost if loaded, otherwise heuristic model.
+        """
+        features = self.feature_eng.extract(match_state)
+
+        if self._model_loaded and self.model is not None:
+            return self._xgb_predict(features, match_state)
+        else:
+            return self._heuristic_predict(match_state, features)
+
+    def _xgb_predict(self, features: np.ndarray, state: dict) -> MLPrediction:
+        """XGBoost prediction"""
+        try:
+            if self.scaler:
+                features = self.scaler.transform(features.reshape(1, -1))[0]
+
+            X = features.reshape(1, -1)
+            win_prob = float(self.model.predict_proba(X)[0][1])
+            momentum = self._calc_momentum(state)
+
+            # Feature importance
+            importance = {}
+            if hasattr(self.model, "feature_importances_"):
+                for name, imp in zip(FeatureEngineering.FEATURE_NAMES, self.model.feature_importances_):
+                    importance[name] = round(float(imp), 4)
+
+            return MLPrediction(
+                win_probability=round(win_prob, 4),
+                momentum_score=round(momentum, 4),
+                feature_importance=importance,
+                confidence=0.85,
+                model_version="xgb_v1"
+            )
+        except Exception as e:
+            logger.error(f"XGB prediction error: {e}")
+            return self._heuristic_predict(state, features)
+
+    def _heuristic_predict(self, state: dict, features: np.ndarray) -> MLPrediction:
+        """
+        Statistical heuristic fallback.
+        Uses run rate, wickets, overs, required run rate.
+        """
+        innings = int(state.get("innings", 1))
+        overs = float(state.get("overs", 0))
+        runs = int(state.get("total_runs", 0))
+        wickets = int(state.get("total_wickets", 0))
+        crr = float(state.get("run_rate", 0))
+        rrr = float(state.get("required_run_rate", 0))
+        target = int(state.get("target", 0))
+
+        if innings == 1:
+            # First innings: estimate probability based on projected total vs par
+            projected = runs + crr * max(0, 20 - overs)
+            par = 165
+            wicket_penalty = wickets * 5
+            strength = (projected - par - wicket_penalty) / 50
+            win_prob = 0.5 + (strength * 0.3)
+        else:
+            # Second innings: chasing team probability
+            if target <= 0:
+                win_prob = 0.5
+            else:
+                runs_needed = target - runs
+                balls_remaining = max(1, (20 - overs) * 6)
+                
+                # Can they score it?
+                required_rr_per_ball = runs_needed / balls_remaining
+                current_rr_per_ball = crr / 6
+
+                # Wicket-adjusted chase probability
+                resources_remaining = (balls_remaining / 120) * ((10 - wickets) / 10)
+                resource_runs = resources_remaining * target
+                win_prob = min(0.95, max(0.05, resource_runs / max(runs_needed, 1)))
+                
+                # Apply over-momentum
+                if rrr > 0 and crr > 0:
+                    rr_ratio = crr / rrr
+                    win_prob = win_prob * min(1.2, max(0.5, rr_ratio))
+
+        # Clamp
+        win_prob = round(max(0.05, min(0.95, win_prob)), 4)
+        momentum = self._calc_momentum(state)
+
+        return MLPrediction(
+            win_probability=win_prob,
+            momentum_score=momentum,
+            feature_importance={},
+            confidence=0.60,
+            model_version="heuristic_v1"
+        )
+
+    def _calc_momentum(self, state: dict) -> float:
+        """Calculate momentum score based on recent scoring patterns"""
+        crr = float(state.get("run_rate", 0))
+        wickets = int(state.get("total_wickets", 0))
+        overs = float(state.get("overs", 0))
+        last_ball = state.get("last_ball", "")
+
+        # Base momentum from run rate
+        base = min(1, max(0, (crr - 6) / 6))  # 12 rpo = full momentum
+
+        # Wicket damper
+        wicket_factor = max(0.4, 1 - wickets * 0.06)
+
+        # Last ball boost/penalty
+        ball_boost = 0.0
+        if last_ball in ["4", "6"]:
+            ball_boost = 0.15
+        elif last_ball == "W":
+            ball_boost = -0.20
+        elif last_ball == "0":
+            ball_boost = -0.05
+
+        momentum = (base * wicket_factor) + ball_boost
+        return round(max(0, min(1, momentum)), 4)
+
+    def train(self, df: pd.DataFrame, target_col: str = "batting_team_won"):
+        """
+        Train XGBoost model on ball-by-ball historical data.
+        """
+        try:
+            import xgboost as xgb
+            from sklearn.preprocessing import StandardScaler
+            from sklearn.model_selection import train_test_split
+            from sklearn.metrics import roc_auc_score, accuracy_score
+
+            logger.info(f"Training XGBoost on {len(df)} records...")
+
+            # Extract features
+            feature_rows = []
+            for _, row in df.iterrows():
+                state = row.to_dict()
+                features = self.feature_eng.extract(state)
+                feature_rows.append(features)
+
+            X = np.vstack(feature_rows)
+            y = df[target_col].values
+
+            # Split
+            X_train, X_test, y_train, y_test = train_test_split(
+                X, y, test_size=0.2, random_state=42, stratify=y
+            )
+
+            # Scale
+            self.scaler = StandardScaler()
+            X_train = self.scaler.fit_transform(X_train)
+            X_test = self.scaler.transform(X_test)
+
+            # Train
+            self.model = xgb.XGBClassifier(
+                n_estimators=500,
+                max_depth=6,
+                learning_rate=0.05,
+                subsample=0.8,
+                colsample_bytree=0.8,
+                use_label_encoder=False,
+                eval_metric="logloss",
+                random_state=42,
+                n_jobs=-1,
+            )
+
+            self.model.fit(
+                X_train, y_train,
+                eval_set=[(X_test, y_test)],
+                verbose=50,
+            )
+
+            # Evaluate
+            y_pred = self.model.predict_proba(X_test)[:, 1]
+            auc = roc_auc_score(y_test, y_pred)
+            acc = accuracy_score(y_test, (y_pred > 0.5).astype(int))
+            logger.info(f"Model trained: AUC={auc:.4f}, Accuracy={acc:.4f}")
+
+            self._model_loaded = True
+            return {"auc": auc, "accuracy": acc}
+
+        except ImportError:
+            logger.error("XGBoost not installed. Run: pip install xgboost")
+            raise
+
+    def save(self, model_path: str, scaler_path: str):
+        """Save trained model and scaler"""
+        os.makedirs(os.path.dirname(model_path), exist_ok=True)
+        with open(model_path, "wb") as f:
+            pickle.dump(self.model, f)
+        with open(scaler_path, "wb") as f:
+            pickle.dump(self.scaler, f)
+        logger.info(f"Model saved to {model_path}")

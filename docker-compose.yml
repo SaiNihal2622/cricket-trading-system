@@ -1,0 +1,129 @@
+version: "3.9"
+
+services:
+  # ─── PostgreSQL ───────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: cricket_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: cricket_trading
+      POSTGRES_USER: cricket
+      POSTGRES_PASSWORD: cricket123
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cricket -d cricket_trading"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─── Redis ────────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: cricket_redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─── Backend API ──────────────────────────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: cricket_backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql+asyncpg://cricket:cricket123@postgres:5432/cricket_trading
+      REDIS_URL: redis://redis:6379/0
+      # Agent
+      AGENT_ENABLED: ${AGENT_ENABLED:-true}
+      AGENT_MODE: ${AGENT_MODE:-simulation}
+      AGENT_LOOP_INTERVAL: ${AGENT_LOOP_INTERVAL:-5}
+      EXCHANGE_TYPE: ${EXCHANGE_TYPE:-simulated}
+      AGENT_AUTOPILOT: ${AGENT_AUTOPILOT:-true}
+      STOP_LOSS_ENABLED: ${STOP_LOSS_ENABLED:-true}
+      STOP_LOSS_PCT: ${STOP_LOSS_PCT:-20}
+      # RoyalBook Exchange
+      ROYALBOOK_USERNAME: ${ROYALBOOK_USERNAME:-}
+      ROYALBOOK_PASSWORD: ${ROYALBOOK_PASSWORD:-}
+      ROYALBOOK_HEADLESS: ${ROYALBOOK_HEADLESS:-true}
+      ROYALBOOK_AUTO_NAVIGATE: ${ROYALBOOK_AUTO_NAVIGATE:-true}
+      # Bankroll & Risk
+      INITIAL_BANKROLL: ${INITIAL_BANKROLL:-10000}
+      MAX_STAKE_PER_TRADE: ${MAX_STAKE_PER_TRADE:-1000}
+      MAX_EXPOSURE: ${MAX_EXPOSURE:-5000}
+      MAX_DAILY_LOSS: ${MAX_DAILY_LOSS:-2000}
+      MAX_CONSECUTIVE_LOSSES: ${MAX_CONSECUTIVE_LOSSES:-5}
+      # AI Reasoner
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      GROQ_MODEL: ${GROQ_MODEL:-llama-3.3-70b-versatile}
+      # Telegram
+      TELEGRAM_ENABLED: ${TELEGRAM_ENABLED:-false}
+      TELEGRAM_API_ID: ${TELEGRAM_API_ID:-}
+      TELEGRAM_API_HASH: ${TELEGRAM_API_HASH:-}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_ALERT_CHAT_ID: ${TELEGRAM_ALERT_CHAT_ID:-}
+      TELEGRAM_CHANNELS: ${TELEGRAM_CHANNELS:-}
+      # Cricket
+      CRICKET_API_KEY: ${CRICKET_API_KEY:-}
+      DEBUG: "false"
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+      - model_artifacts:/app/ml_model/artifacts
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ─── Frontend ─────────────────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: cricket_frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    environment:
+      REACT_APP_API_URL: http://localhost:8000
+      REACT_APP_WS_URL: ws://localhost:8000
+    depends_on:
+      - backend
+
+  # ─── Nginx Reverse Proxy ──────────────────────────────────────────────────────
+  nginx:
+    image: nginx:alpine
+    container_name: cricket_nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./docker/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - backend
+      - frontend
+
+volumes:
+  postgres_data:
+  redis_data:
+  model_artifacts:

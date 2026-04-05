@@ -1,0 +1,54 @@
+﻿============================= test session starts =============================
+platform win32 -- Python 3.11.9, pytest-8.0.0, pluggy-1.6.0 -- C:\Users\saini\AppData\Local\Programs\Python\Python311\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Users\saini\Desktop\iplclaude\cricket-trading-system
+plugins: anyio-4.11.0
+collecting ... collected 11 items
+
+tests/test_agent.py::TestPositionManager::test_open_position PASSED      [  9%]
+tests/test_agent.py::TestPositionManager::test_loss_cut FAILED           [ 18%]
+tests/test_agent.py::TestPositionManager::test_bookset PASSED            [ 27%]
+tests/test_agent.py::TestPositionManager::test_close_position PASSED     [ 36%]
+tests/test_agent.py::TestRiskManager::test_approve_trade_normal PASSED   [ 45%]
+tests/test_agent.py::TestRiskManager::test_approve_trade_insufficient_confidence PASSED [ 54%]
+tests/test_agent.py::TestRiskManager::test_approve_trade_circuit_breaker PASSED [ 63%]
+tests/test_agent.py::TestRiskManager::test_record_trade_result PASSED    [ 72%]
+tests/test_agent.py::TestSimulatedExchange::test_place_back SKIPPED      [ 81%]
+tests/test_agent.py::TestSimulatedExchange::test_place_lay SKIPPED (...) [ 90%]
+tests/test_agent.py::TestSimulatedExchange::test_insufficient_balance SKIPPED [100%]
+
+================================== FAILURES ===================================
+______________________ TestPositionManager.test_loss_cut ______________________
+tests\test_agent.py:41: in test_loss_cut
+    assert pos.total_exposure == -333.33  # 1000 - 1333.33
+E   AssertionError: assert -333.3299999999999 == -333.33
+E    +  where -333.3299999999999 = Position(position_id='POS-0001', match_id='101', team_a='MI', team_b='CSK', backed_team='MI', entry_odds=2.0, entry_stake=1000, status=<PositionStatus.HEDGED: 'HEDGED'>, current_odds_a=0.0, current_odds_b=0.0, hedge_stake=1333.33, hedge_odds=1.5, bookset_stake_a=0.0, bookset_stake_b=0.0, realized_pnl=-333.3299999999999, unrealized_pnl=0.0, trades=[Trade(trade_id='TRD-00001', position_id='POS-0001', side=<PositionSide.BACK: 'BACK'>, team='MI', odds=2.0, stake=1000, timestamp='2026-04-05T17:02:08.747618+00:00', trade_type='ENTRY'), Trade(trade_id='TRD-00002', position_id='POS-0001', side=<PositionSide.BACK: 'BACK'>, team='CSK', odds=1.5, stake=1333.33, timestamp='2026-04-05T17:02:08.747618+00:00', trade_type='HEDGE')], opened_at='2026-04-05T17:02:08.747618+00:00', closed_at=None, close_reason='').total_exposure
+============================== warnings summary ===============================
+tests\test_agent.py:119
+  C:\Users\saini\Desktop\iplclaude\cricket-trading-system\tests\test_agent.py:119: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_agent.py:127
+  C:\Users\saini\Desktop\iplclaude\cricket-trading-system\tests\test_agent.py:127: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_agent.py:135
+  C:\Users\saini\Desktop\iplclaude\cricket-trading-system\tests\test_agent.py:135: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests/test_agent.py::TestSimulatedExchange::test_place_back
+tests/test_agent.py::TestSimulatedExchange::test_place_lay
+tests/test_agent.py::TestSimulatedExchange::test_insufficient_balance
+  C:\Users\saini\AppData\Local\Programs\Python\Python311\Lib\site-packages\_pytest\python.py:182: PytestUnhandledCoroutineWarning: async def functions are not natively supported and have been skipped.
+  You need to install a suitable plugin for your async framework, for example:
+    - anyio
+    - pytest-asyncio
+    - pytest-tornasync
+    - pytest-trio
+    - pytest-twisted
+    warnings.warn(PytestUnhandledCoroutineWarning(msg.format(nodeid)))
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests/test_agent.py::TestPositionManager::test_loss_cut - AssertionErr...
+============= 1 failed, 7 passed, 3 skipped, 6 warnings in 0.14s ==============
