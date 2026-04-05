@@ -39,36 +39,10 @@ COPY backend /app/backend
 WORKDIR /app/backend
 RUN mkdir -p /app/ml_model/artifacts
 
-# ── Nginx config ───────────────────────────────────────────────────────────────
-RUN printf 'server {\n\
-    listen 80;\n\
-    root /app/frontend/build;\n\
-    index index.html;\n\
-    location /api/ {\n\
-        proxy_pass http://127.0.0.1:8000;\n\
-        proxy_http_version 1.1;\n\
-        proxy_set_header Upgrade $http_upgrade;\n\
-        proxy_set_header Connection "upgrade";\n\
-        proxy_set_header Host $host;\n\
-    }\n\
-    location /ws {\n\
-        proxy_pass http://127.0.0.1:8000;\n\
-        proxy_http_version 1.1;\n\
-        proxy_set_header Upgrade $http_upgrade;\n\
-        proxy_set_header Connection "upgrade";\n\
-    }\n\
-    location /health {\n\
-        proxy_pass http://127.0.0.1:8000;\n\
-    }\n\
-    location / {\n\
-        try_files $uri /index.html;\n\
-    }\n\
-}\n' > /etc/nginx/sites-available/default
-
-# ── Supervisor (process manager) ──────────────────────────────────────────────
+# ── Supervisor config (nginx port set dynamically at runtime via start.sh) ─────
 RUN printf '[supervisord]\nnodaemon=true\nlogfile=/dev/null\nlogfile_maxbytes=0\n\n\
 [program:backend]\ncommand=uvicorn main:app --host 0.0.0.0 --port 8000 --workers 1\n\
-directory=/app/backend\nautorestart=true\nstartretries=3\n\
+directory=/app/backend\nautorestart=true\nstartretries=5\n\
 stdout_logfile=/dev/stdout\nstdout_logfile_maxbytes=0\n\
 stderr_logfile=/dev/stderr\nstderr_logfile_maxbytes=0\n\n\
 [program:nginx]\ncommand=/usr/sbin/nginx -g "daemon off;"\nautorestart=true\n\
@@ -76,6 +50,10 @@ stdout_logfile=/dev/stdout\nstdout_logfile_maxbytes=0\n\
 stderr_logfile=/dev/stderr\nstderr_logfile_maxbytes=0\n' \
 > /etc/supervisor/conf.d/app.conf
 
-EXPOSE 80
+# ── Startup script (sets nginx port from $PORT) ───────────────────────────────
+COPY start.sh /start.sh
+RUN chmod +x /start.sh
 
-CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/app.conf"]
+EXPOSE 8080
+
+CMD ["/start.sh"]
