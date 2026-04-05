@@ -74,7 +74,13 @@ class CricketStatsService:
     """
 
     CRICBUZZ_BASE = "https://www.cricbuzz.com"
-    CRICBUZZ_LIVE = "https://www.cricbuzz.com/api/cricket-match/live-matches"
+    # Try multiple live-match API endpoints in order (Cricbuzz changes these)
+    CRICBUZZ_LIVE_URLS = [
+        "https://www.cricbuzz.com/api/cricket-match/live-matches",
+        "https://www.cricbuzz.com/api/html/series-stats/live-matches",
+        "https://www.cricbuzz.com/matches/live-matches",
+    ]
+    CRICBUZZ_LIVE_HTML = "https://www.cricbuzz.com/cricket-match/live-scores"
     CRICBUZZ_MATCH = "https://www.cricbuzz.com/api/cricket-match/{match_id}/scorecard"
 
     def __init__(self, cricapi_key: str = ""):
@@ -103,39 +109,85 @@ class CricketStatsService:
 
     async def get_live_ipl_matches(self) -> list:
         """
-        Fetch live IPL matches from Cricbuzz.
-        Returns list of match dicts with live score info.
+        Fetch live IPL matches — tries multiple Cricbuzz API endpoints,
+        then falls back to scraping the HTML live scores page.
         """
+        client = await self.get_client()
+
+        # ── Try JSON endpoints first ──────────────────────────────────────────
+        for url in self.CRICBUZZ_LIVE_URLS:
+            try:
+                resp = await client.get(url, timeout=8.0)
+                if resp.status_code == 200:
+                    try:
+                        data = resp.json()
+                    except Exception:
+                        continue
+                    matches = self._parse_cricbuzz_json(data)
+                    if matches is not None:
+                        logger.info(f"Cricbuzz JSON ({url}): {len(matches)} live IPL matches")
+                        return matches
+            except Exception as e:
+                logger.debug(f"Cricbuzz endpoint {url} failed: {e}")
+
+        # ── Fallback: scrape HTML live scores page ────────────────────────────
         try:
-            client = await self.get_client()
-            # Cricbuzz live JSON endpoint
-            resp = await client.get(
-                "https://www.cricbuzz.com/api/cricket-match/live-matches",
-                timeout=8.0,
-            )
+            resp = await client.get(self.CRICBUZZ_LIVE_HTML, timeout=10.0)
             if resp.status_code == 200:
-                data = resp.json()
-                matches = []
-                for m in data.get("typeMatches", []):
-                    for series in m.get("seriesMatches", []):
-                        for match in series.get("seriesAdWrapper", {}).get("matches", []):
-                            mi = match.get("matchInfo", {})
-                            # Filter IPL
-                            series_name = mi.get("seriesName", "").lower()
-                            if "ipl" in series_name or "indian premier" in series_name:
-                                matches.append({
-                                    "match_id": mi.get("matchId"),
-                                    "team_a": mi.get("team1", {}).get("teamName", ""),
-                                    "team_b": mi.get("team2", {}).get("teamName", ""),
-                                    "series": mi.get("seriesName"),
-                                    "venue": mi.get("venueInfo", {}).get("ground", ""),
-                                    "state": mi.get("state", ""),
-                                })
-                logger.info(f"Cricbuzz: found {len(matches)} live IPL matches")
+                matches = self._parse_cricbuzz_html(resp.text)
+                logger.info(f"Cricbuzz HTML scrape: {len(matches)} live IPL matches")
                 return matches
         except Exception as e:
-            logger.debug(f"Cricbuzz live matches failed: {e}")
+            logger.debug(f"Cricbuzz HTML scrape failed: {e}")
+
         return []
+
+    def _parse_cricbuzz_json(self, data: dict) -> Optional[list]:
+        """Parse Cricbuzz live-matches JSON response."""
+        matches = []
+        try:
+            for m in data.get("typeMatches", []):
+                for series in m.get("seriesMatches", []):
+                    for match in series.get("seriesAdWrapper", {}).get("matches", []):
+                        mi = match.get("matchInfo", {})
+                        series_name = mi.get("seriesName", "").lower()
+                        if "ipl" in series_name or "indian premier" in series_name:
+                            matches.append({
+                                "match_id": mi.get("matchId"),
+                                "team_a": mi.get("team1", {}).get("teamName", ""),
+                                "team_b": mi.get("team2", {}).get("teamName", ""),
+                                "series": mi.get("seriesName"),
+                                "venue": mi.get("venueInfo", {}).get("ground", ""),
+                                "state": mi.get("state", ""),
+                            })
+            return matches
+        except Exception:
+            return None
+
+    def _parse_cricbuzz_html(self, html: str) -> list:
+        """Extract IPL match cards from Cricbuzz live scores HTML."""
+        from bs4 import BeautifulSoup
+        matches = []
+        ipl_keywords = ["ipl", "indian premier", "t20"]
+        try:
+            soup = BeautifulSoup(html, "lxml")
+            for card in soup.select(".cb-mtch-lst, .cb-match-item, [class*='match']"):
+                text = card.get_text(" ", strip=True).lower()
+                if any(k in text for k in ipl_keywords):
+                    teams_els = card.select("[class*='team'], [class*='tname']")
+                    team_names = [e.get_text(strip=True) for e in teams_els if e.get_text(strip=True)]
+                    if len(team_names) >= 2:
+                        matches.append({
+                            "match_id": None,
+                            "team_a": team_names[0],
+                            "team_b": team_names[1],
+                            "series": "IPL",
+                            "venue": "",
+                            "state": "live",
+                        })
+        except Exception as e:
+            logger.debug(f"HTML parse error: {e}")
+        return matches
 
     async def get_match_scorecard(self, cricbuzz_id: int) -> dict:
         """
@@ -155,19 +207,23 @@ class CricketStatsService:
 
     async def get_live_score_cricbuzz(self) -> Optional[dict]:
         """
-        Get the first live IPL match score from Cricbuzz mini-scorecard API.
-        Returns enriched state dict compatible with our MatchState format.
+        Get the first live IPL match score from Cricbuzz.
+        Tries multiple API endpoints, returns enriched state dict.
         """
         try:
             client = await self.get_client()
-            resp = await client.get(
-                "https://www.cricbuzz.com/api/cricket-match/live-matches",
-                timeout=8.0,
-            )
-            if resp.status_code != 200:
+            data = None
+            for url in self.CRICBUZZ_LIVE_URLS:
+                try:
+                    resp = await client.get(url, timeout=8.0)
+                    if resp.status_code == 200:
+                        data = resp.json()
+                        break
+                except Exception:
+                    continue
+            if not data:
                 return None
 
-            data = resp.json()
             for match_type in data.get("typeMatches", []):
                 for series in match_type.get("seriesMatches", []):
                     for match in series.get("seriesAdWrapper", {}).get("matches", []):

@@ -63,7 +63,23 @@ class RoyalBookExchange:
 
     # ── Lifecycle ────────────────────────────────────────────────────────────
 
+    async def check_site_accessible(self) -> bool:
+        """Quick HTTP check to see if royalbook.win is reachable (no browser needed)."""
+        import httpx
+        try:
+            async with httpx.AsyncClient(timeout=10, follow_redirects=True) as client:
+                r = await client.get(self.LOGIN_URL, headers={"User-Agent": "Mozilla/5.0"})
+                ok = r.status_code < 500
+                logger.info(f"RoyalBook site check: HTTP {r.status_code} — {'✅ reachable' if ok else '❌ unreachable'}")
+                return ok
+        except Exception as e:
+            logger.warning(f"RoyalBook site check failed: {e}")
+            return False
+
     async def start(self):
+        # First verify the site is reachable at all
+        await self.check_site_accessible()
+
         self._pw      = await async_playwright().start()
         self._browser = await self._pw.chromium.launch(
             headless=self.headless,
@@ -74,6 +90,8 @@ class RoyalBookExchange:
                 "--disable-web-security",
                 "--disable-setuid-sandbox",
                 "--single-process",
+                "--disable-gpu",
+                "--disable-software-rasterizer",
             ],
         )
         self._ctx = await self._browser.new_context(
@@ -109,51 +127,117 @@ class RoyalBookExchange:
     # ── Auth ─────────────────────────────────────────────────────────────────
 
     async def _login(self):
-        """Full login flow with robust selector fallbacks."""
+        """Full login flow with robust selector fallbacks + screenshot on failure."""
         p = self._page
         self._login_attempts += 1
         logger.info(f"RoyalBook login attempt #{self._login_attempts}")
 
         try:
-            await p.goto(self.LOGIN_URL, wait_until="domcontentloaded", timeout=30000)
-            await p.wait_for_timeout(2000)
+            await p.goto(self.LOGIN_URL, wait_until="domcontentloaded", timeout=35000)
+            await p.wait_for_timeout(2500)
 
-            # Fill username
+            current_url = p.url
+            logger.info(f"Login page loaded: {current_url}")
+
+            # If already logged in (session cookie survived restart)
+            if "login" not in current_url.lower() and current_url != "about:blank":
+                logger.info("RoyalBook: already logged in via cookie ✅")
+                self._logged_in = True
+                return
+
+            # ── Fill username ────────────────────────────────────────────────
+            user_filled = False
             for sel in self._USER_SELS:
                 try:
-                    await p.fill(sel, self.username, timeout=2500)
-                    logger.debug(f"Username filled via: {sel}")
+                    await p.fill(sel, self.username, timeout=3000)
+                    logger.info(f"Username filled via: {sel}")
+                    user_filled = True
                     break
                 except Exception:
                     continue
+            if not user_filled:
+                logger.warning("Could not find username field — dumping page text")
+                try:
+                    txt = await p.inner_text("body")
+                    logger.warning(f"Page body (first 400): {txt[:400]}")
+                except Exception:
+                    pass
 
-            await p.wait_for_timeout(400)
+            await p.wait_for_timeout(500)
 
-            # Fill password
+            # ── Fill password ────────────────────────────────────────────────
             for sel in self._PASS_SELS:
                 try:
-                    await p.fill(sel, self.password, timeout=2500)
-                    logger.debug(f"Password filled via: {sel}")
+                    await p.fill(sel, self.password, timeout=3000)
+                    logger.info(f"Password filled via: {sel}")
                     break
                 except Exception:
                     continue
 
-            await p.wait_for_timeout(400)
+            await p.wait_for_timeout(500)
 
-            # Submit
+            # ── Submit ───────────────────────────────────────────────────────
+            clicked = False
             for sel in self._SUBMIT_SELS:
                 try:
-                    await p.click(sel, timeout=2500)
-                    logger.debug(f"Submit clicked via: {sel}")
+                    await p.click(sel, timeout=3000)
+                    logger.info(f"Submit clicked via: {sel}")
+                    clicked = True
                     break
                 except Exception:
                     continue
 
-            await p.wait_for_load_state("networkidle", timeout=20000)
-            await p.wait_for_timeout(1000)
+            if not clicked:
+                # Last resort: press Enter on the password field
+                for sel in self._PASS_SELS:
+                    try:
+                        await p.press(sel, "Enter", timeout=2000)
+                        logger.info("Submitted via Enter key")
+                        clicked = True
+                        break
+                    except Exception:
+                        continue
 
-            self._logged_in = "login" not in p.url.lower()
-            logger.info(f"RoyalBook login: {'✅ SUCCESS' if self._logged_in else '❌ FAILED'} → {p.url}")
+            # Wait for navigation after submit
+            try:
+                await p.wait_for_load_state("networkidle", timeout=25000)
+            except Exception:
+                await p.wait_for_timeout(4000)
+
+            final_url = p.url
+            # Success = URL changed away from /login
+            login_gone = "login" not in final_url.lower()
+
+            # Also check for account elements as secondary confirmation
+            if not login_gone:
+                for sel in self._BALANCE_SELS:
+                    try:
+                        el = await p.query_selector(sel)
+                        if el:
+                            login_gone = True
+                            break
+                    except Exception:
+                        continue
+
+            self._logged_in = login_gone
+            logger.info(
+                f"RoyalBook login: {'✅ SUCCESS' if self._logged_in else '❌ FAILED'} "
+                f"→ {final_url}"
+            )
+
+            # Screenshot debug on failure
+            if not self._logged_in:
+                try:
+                    import os
+                    os.makedirs("/tmp/rb_debug", exist_ok=True)
+                    path = f"/tmp/rb_debug/login_fail_{self._login_attempts}.png"
+                    await p.screenshot(path=path)
+                    logger.info(f"Debug screenshot saved: {path}")
+                    # Also log visible text for diagnosis
+                    txt = await p.inner_text("body")
+                    logger.warning(f"Login page content (first 500): {txt[:500]}")
+                except Exception as se:
+                    logger.debug(f"Screenshot failed: {se}")
 
         except Exception as e:
             logger.error(f"Login error: {e}")
