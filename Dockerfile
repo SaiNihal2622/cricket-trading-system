@@ -6,56 +6,74 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-# ── System deps (includes Playwright + nginx) ──────────────────────────────
+# ── System deps ───────────────────────────────────────────────────────────────
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc libpq-dev curl nginx supervisor gnupg ca-certificates \
     libnss3 libatk-bridge2.0-0 libdrm2 libxkbcommon0 \
-    libgbm1 libxrandr2 libxdamage1 \
-    libxcomposite1 libxfixes3 libatk1.0-0 \
-    && apt-get install -y --no-install-recommends libasound2 || \
-       apt-get install -y --no-install-recommends libasound2t64 || true \
+    libgbm1 libxrandr2 libxdamage1 libxcomposite1 libxfixes3 libatk1.0-0 \
+    libcups2 libpango-1.0-0 libcairo2 \
+    fonts-liberation fonts-noto-color-emoji \
+    && (apt-get install -y --no-install-recommends libasound2 2>/dev/null || \
+        apt-get install -y --no-install-recommends libasound2t64 2>/dev/null || true) \
     && rm -rf /var/lib/apt/lists/*
 
-# ── Node.js 20 LTS (via NodeSource) ───────────────────────────────────────
+# ── Node.js 20 LTS (via NodeSource) ───────────────────────────────────────────
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/*
 
-# ── Python deps ────────────────────────────────────────────────────────────
+# ── Python deps ───────────────────────────────────────────────────────────────
 COPY backend/requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
-# ── Playwright Chromium (manual deps to avoid missing font packages on Trixie)
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    fonts-liberation fonts-noto-color-emoji \
-    && rm -rf /var/lib/apt/lists/* \
-    && playwright install chromium
+# ── Playwright Chromium (no --with-deps to avoid missing Trixie packages) ─────
+RUN playwright install chromium
 
-# ── Frontend build ─────────────────────────────────────────────────────────
+# ── Frontend build ─────────────────────────────────────────────────────────────
 COPY frontend /app/frontend
 WORKDIR /app/frontend
-RUN npm ci && npm run build
+RUN npm install && npm run build
 
-# ── Backend ────────────────────────────────────────────────────────────────
+# ── Backend ────────────────────────────────────────────────────────────────────
 COPY backend /app/backend
 WORKDIR /app/backend
 RUN mkdir -p /app/ml_model/artifacts
 
-# ── Nginx config ──────────────────────────────────────────────────────────
-RUN echo 'server { \
-    listen 80; \
-    root /app/frontend/build; \
-    index index.html; \
-    location /api { proxy_pass http://127.0.0.1:8000; proxy_http_version 1.1; proxy_set_header Upgrade $http_upgrade; proxy_set_header Connection "upgrade"; } \
-    location /ws  { proxy_pass http://127.0.0.1:8000; proxy_http_version 1.1; proxy_set_header Upgrade $http_upgrade; proxy_set_header Connection "upgrade"; } \
-    location /health { proxy_pass http://127.0.0.1:8000; } \
-    location / { try_files $uri /index.html; } \
-}' > /etc/nginx/sites-available/default
+# ── Nginx config ───────────────────────────────────────────────────────────────
+RUN printf 'server {\n\
+    listen 80;\n\
+    root /app/frontend/build;\n\
+    index index.html;\n\
+    location /api/ {\n\
+        proxy_pass http://127.0.0.1:8000;\n\
+        proxy_http_version 1.1;\n\
+        proxy_set_header Upgrade $http_upgrade;\n\
+        proxy_set_header Connection "upgrade";\n\
+        proxy_set_header Host $host;\n\
+    }\n\
+    location /ws {\n\
+        proxy_pass http://127.0.0.1:8000;\n\
+        proxy_http_version 1.1;\n\
+        proxy_set_header Upgrade $http_upgrade;\n\
+        proxy_set_header Connection "upgrade";\n\
+    }\n\
+    location /health {\n\
+        proxy_pass http://127.0.0.1:8000;\n\
+    }\n\
+    location / {\n\
+        try_files $uri /index.html;\n\
+    }\n\
+}\n' > /etc/nginx/sites-available/default
 
-# ── Supervisor (process manager) ─────────────────────────────────────────
-RUN echo '[supervisord]\nnodaemon=true\n\
-[program:backend]\ncommand=uvicorn main:app --host 0.0.0.0 --port 8000 --workers 1\ndirectory=/app/backend\nautorestart=true\nstdout_logfile=/dev/stdout\nstdout_logfile_maxbytes=0\nstderr_logfile=/dev/stderr\nstderr_logfile_maxbytes=0\n\
-[program:nginx]\ncommand=nginx -g "daemon off;"\nautorestart=true\nstdout_logfile=/dev/stdout\nstdout_logfile_maxbytes=0\nstderr_logfile=/dev/stderr\nstderr_logfile_maxbytes=0' \
+# ── Supervisor (process manager) ──────────────────────────────────────────────
+RUN printf '[supervisord]\nnodaemon=true\nlogfile=/dev/null\nlogfile_maxbytes=0\n\n\
+[program:backend]\ncommand=uvicorn main:app --host 0.0.0.0 --port 8000 --workers 1\n\
+directory=/app/backend\nautorestart=true\nstartretries=3\n\
+stdout_logfile=/dev/stdout\nstdout_logfile_maxbytes=0\n\
+stderr_logfile=/dev/stderr\nstderr_logfile_maxbytes=0\n\n\
+[program:nginx]\ncommand=/usr/sbin/nginx -g "daemon off;"\nautorestart=true\n\
+stdout_logfile=/dev/stdout\nstdout_logfile_maxbytes=0\n\
+stderr_logfile=/dev/stderr\nstderr_logfile_maxbytes=0\n' \
 > /etc/supervisor/conf.d/app.conf
 
 EXPOSE 80
