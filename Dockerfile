@@ -8,11 +8,17 @@ WORKDIR /app
 
 # ── System deps (includes Playwright + nginx) ──────────────────────────────
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc libpq-dev curl nginx supervisor \
+    gcc libpq-dev curl nginx supervisor gnupg ca-certificates \
     libnss3 libatk-bridge2.0-0 libdrm2 libxkbcommon0 \
-    libgbm1 libasound2 libxrandr2 libxdamage1 \
+    libgbm1 libxrandr2 libxdamage1 \
     libxcomposite1 libxfixes3 libatk1.0-0 \
-    nodejs npm \
+    && apt-get install -y --no-install-recommends libasound2 || \
+       apt-get install -y --no-install-recommends libasound2t64 || true \
+    && rm -rf /var/lib/apt/lists/*
+
+# ── Node.js 20 LTS (via NodeSource) ───────────────────────────────────────
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/*
 
 # ── Python deps ────────────────────────────────────────────────────────────
