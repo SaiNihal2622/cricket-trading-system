@@ -174,9 +174,11 @@ class RoyalBookExchange:
                 except Exception:
                     continue
 
-            await p.wait_for_timeout(500)
+            await p.wait_for_timeout(800)
 
             # ── Submit ───────────────────────────────────────────────────────
+            # Wait a moment for any JS validation to settle before clicking
+            await p.wait_for_timeout(600)
             clicked = False
             for sel in self._SUBMIT_SELS:
                 try:

@@ -488,10 +488,7 @@ class TradingAgent:
         odds_b = data["odds_b"]
         venue  = data.get("venue", state.get("venue", ""))
 
-        # Skip if neither team is at high odds
-        if max(odds_a, odds_b) < self.value_strategy.HIGH_ODDS_THRESHOLD:
-            return
-
+        # Evaluate at any odds — value engine decides internally
         opp = self.value_strategy.evaluate(
             state    = state,
             team_a   = state.get("team_a", "Team A"),

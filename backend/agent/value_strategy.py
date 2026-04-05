@@ -26,6 +26,18 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass
+class WaitEntry:
+    """A pending entry waiting for odds to reach target level (kept for compatibility)."""
+    team:         str
+    target_odds:  float
+    max_odds:     float
+    stake:        float
+    created_over: float
+    max_over:     float
+    reasoning:    str
+
+
+@dataclass
 class ValueOpportunity:
     """A value betting opportunity at any odds level."""
     action:        str      # 'BACK', 'LAY', 'PROGRESSIVE_BOOKSET'
