@@ -7,3 +7,4 @@ restartPolicyType = "on_failure"
 restartPolicyMaxRetries = 5
 healthcheckPath = "/health"
 healthcheckTimeout = 120
+region = "ap-southeast"

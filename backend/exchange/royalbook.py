@@ -92,25 +92,45 @@ class RoyalBookExchange:
                 "--single-process",
                 "--disable-gpu",
                 "--disable-software-rasterizer",
+                "--window-size=1440,900",
             ],
         )
         self._ctx = await self._browser.new_context(
             user_agent=(
                 "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
                 "AppleWebKit/537.36 (KHTML, like Gecko) "
-                "Chrome/124.0.0.0 Safari/537.36"
+                "Chrome/131.0.0.0 Safari/537.36"
             ),
             viewport={"width": 1440, "height": 900},
+            locale="en-IN",
+            timezone_id="Asia/Kolkata",
             extra_http_headers={
-                "Accept-Language": "en-US,en;q=0.9",
-                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                "Accept-Language": "en-IN,en-GB;q=0.9,en;q=0.8",
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+                "sec-ch-ua": '"Chromium";v="131", "Google Chrome";v="131", "Not_A Brand";v="24"',
+                "sec-ch-ua-mobile": "?0",
+                "sec-ch-ua-platform": '"Windows"',
             },
         )
-        # Mask automation detection
+        # Deep anti-detection — make headless Chromium look like real Chrome
         await self._ctx.add_init_script("""
-            Object.defineProperty(navigator, 'webdriver', { get: () => false });
-            Object.defineProperty(navigator, 'languages', { get: () => ['en-US', 'en'] });
-            window.chrome = { runtime: {} };
+            // Remove webdriver flag
+            Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+            // Fake plugins (real Chrome has these)
+            Object.defineProperty(navigator, 'plugins', {
+                get: () => [1, 2, 3, 4, 5],
+            });
+            Object.defineProperty(navigator, 'languages', {
+                get: () => ['en-IN', 'en-GB', 'en'],
+            });
+            // Chrome runtime
+            window.chrome = { runtime: {}, loadTimes: function(){}, csi: function(){} };
+            // Fake notification permission
+            const origQuery = window.navigator.permissions.query;
+            window.navigator.permissions.query = (params) =>
+                params.name === 'notifications'
+                    ? Promise.resolve({ state: Notification.permission })
+                    : origQuery(params);
         """)
         self._page = await self._ctx.new_page()
         await self._login()
@@ -145,36 +165,40 @@ class RoyalBookExchange:
                 self._logged_in = True
                 return
 
-            # ── Fill username ────────────────────────────────────────────────
+            # ── Fill username (type like a human, not instant fill) ─────────
             user_filled = False
             for sel in self._USER_SELS:
                 try:
-                    await p.fill(sel, self.username, timeout=3000)
-                    logger.info(f"Username filled via: {sel}")
+                    await p.click(sel, timeout=3000)
+                    await p.wait_for_timeout(200)
+                    await p.type(sel, self.username, delay=80)  # 80ms per char
+                    logger.info(f"Username typed via: {sel}")
                     user_filled = True
                     break
                 except Exception:
                     continue
             if not user_filled:
-                logger.warning("Could not find username field — dumping page text")
+                logger.warning("Could not find username field — page text:")
                 try:
                     txt = await p.inner_text("body")
-                    logger.warning(f"Page body (first 400): {txt[:400]}")
+                    logger.warning(f"{txt[:400]}")
                 except Exception:
                     pass
 
-            await p.wait_for_timeout(500)
+            await p.wait_for_timeout(600)
 
-            # ── Fill password ────────────────────────────────────────────────
+            # ── Fill password (human-like typing) ───────────────────────────
             for sel in self._PASS_SELS:
                 try:
-                    await p.fill(sel, self.password, timeout=3000)
-                    logger.info(f"Password filled via: {sel}")
+                    await p.click(sel, timeout=3000)
+                    await p.wait_for_timeout(200)
+                    await p.type(sel, self.password, delay=80)
+                    logger.info(f"Password typed via: {sel}")
                     break
                 except Exception:
                     continue
 
-            await p.wait_for_timeout(800)
+            await p.wait_for_timeout(1000)
 
             # ── Submit ───────────────────────────────────────────────────────
             # Wait a moment for any JS validation to settle before clicking
