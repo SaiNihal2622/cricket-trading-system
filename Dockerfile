@@ -24,7 +24,12 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
 # ── Python deps ────────────────────────────────────────────────────────────
 COPY backend/requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
-RUN playwright install chromium --with-deps
+
+# ── Playwright Chromium (manual deps to avoid missing font packages on Trixie)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    fonts-liberation fonts-noto-color-emoji \
+    && rm -rf /var/lib/apt/lists/* \
+    && playwright install chromium
 
 # ── Frontend build ─────────────────────────────────────────────────────────
 COPY frontend /app/frontend
