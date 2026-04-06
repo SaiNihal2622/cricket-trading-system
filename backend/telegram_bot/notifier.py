@@ -113,6 +113,83 @@ async def send_bookset_call(team: str, entry_odds: float, current_odds: float, o
     await send_signal(msg)
 
 
+async def send_stop_loss(
+    team: str, entry_odds: float, current_odds: float,
+    loss_pct: float, hedge_team: str, hedge_stake: float,
+    overs: float, score: str, match: str = "",
+):
+    ts = datetime.now().strftime("%H:%M:%S IST")
+    msg = (
+        f"🛑 **STOP LOSS — {match or 'IPL'}**\n"
+        f"━━━━━━━━━━━━━━━━━━━\n"
+        f"Backed **{team}** @ {entry_odds:.2f}\n"
+        f"Now @ **{current_odds:.2f}** — loss {loss_pct:.1f}%\n"
+        f"📊 Overs: {overs:.1f} | Score: {score}\n"
+        f"━━━━━━━━━━━━━━━━━━━\n"
+        f"**HEDGE: BACK {hedge_team} ₹{hedge_stake:.0f}** to cut losses\n"
+        f"⏰ {ts}"
+    )
+    await send_signal(msg)
+
+
+async def send_loss_cut(
+    team: str, entry_odds: float, current_odds: float,
+    pnl: float, match: str = "",
+):
+    ts = datetime.now().strftime("%H:%M:%S IST")
+    emoji = "💚" if pnl >= 0 else "💔"
+    msg = (
+        f"{emoji} **LOSS CUT EXECUTED — {match or 'IPL'}**\n"
+        f"━━━━━━━━━━━━━━━━━━━\n"
+        f"**{team}** entry @ {entry_odds:.2f} → exit @ {current_odds:.2f}\n"
+        f"P&L: **₹{pnl:+.0f}**\n"
+        f"⏰ {ts}"
+    )
+    await send_signal(msg)
+
+
+async def send_session_call(
+    label: str, side: str, stake: float,
+    confidence: float, reasoning: str,
+    overs: float, score: str, match: str = "",
+):
+    ts = datetime.now().strftime("%H:%M:%S IST")
+    side_emoji = "🔼 YES" if side.upper() == "YES" else "🔽 NO"
+    msg = (
+        f"📊 **SESSION CALL — {match or 'IPL'}**\n"
+        f"━━━━━━━━━━━━━━━━━━━\n"
+        f"**{side_emoji} {label}**\n"
+        f"💰 Stake: ₹{stake:.0f}  |  Confidence: {confidence*100:.0f}%\n"
+        f"📊 Overs: {overs:.1f}  |  Score: {score}\n"
+        f"💬 _{reasoning[:160]}_\n"
+        f"⏰ {ts}"
+    )
+    await send_signal(msg)
+
+
+async def send_anti_panic(signal: str, team: str, overs: float, score: str, match: str = ""):
+    ts = datetime.now().strftime("%H:%M:%S IST")
+    if signal == "HOLD":
+        msg = (
+            f"😤 **WICKET — HOLD POSITION — {match or 'IPL'}**\n"
+            f"━━━━━━━━━━━━━━━━━━━\n"
+            f"Wicket fell but situation recoverable.\n"
+            f"**{team}** — Overs: {overs:.1f} | Score: {score}\n"
+            f"**Do NOT panic exit.** Hold your position.\n"
+            f"⏰ {ts}"
+        )
+    else:
+        msg = (
+            f"🚨 **WICKET — EXIT NOW — {match or 'IPL'}**\n"
+            f"━━━━━━━━━━━━━━━━━━━\n"
+            f"Collapse confirmed. Cut losses immediately.\n"
+            f"**{team}** — Overs: {overs:.1f} | Score: {score}\n"
+            f"**LAY your position NOW.**\n"
+            f"⏰ {ts}"
+        )
+    await send_signal(msg)
+
+
 async def send_info(text: str):
     """Send a plain info/status message."""
     await send_signal(f"ℹ️ {text}")

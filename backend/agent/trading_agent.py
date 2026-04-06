@@ -216,8 +216,30 @@ class TradingAgent:
                 )
                 if anti_panic == "HOLD":
                     self._log_action("ANTI_PANIC_HOLD", "Wicket panic — situation still recoverable, holding position")
+                    try:
+                        from telegram_bot.notifier import send_anti_panic
+                        s = match_data["state"]
+                        asyncio.create_task(send_anti_panic(
+                            "HOLD", position.backed_team,
+                            float(s.get("overs",0)),
+                            f"{s.get('total_runs',0)}/{s.get('total_wickets',0)}",
+                            f"{s.get('team_a','?')} vs {s.get('team_b','?')}",
+                        ))
+                    except Exception:
+                        pass
                 elif anti_panic == "CUT":
                     self._log_action("ANTI_PANIC_CUT", "Wicket confirms collapse — triggering loss cut")
+                    try:
+                        from telegram_bot.notifier import send_anti_panic
+                        s = match_data["state"]
+                        asyncio.create_task(send_anti_panic(
+                            "CUT", position.backed_team,
+                            float(s.get("overs",0)),
+                            f"{s.get('total_runs',0)}/{s.get('total_wickets',0)}",
+                            f"{s.get('team_a','?')} vs {s.get('team_b','?')}",
+                        ))
+                    except Exception:
+                        pass
                     if decision:
                         decision.signal = "LOSS_CUT"
                         await self._execute_decision(match_id, match_data, decision, position)
@@ -327,6 +349,26 @@ class TradingAgent:
                 "loss_pct": round(loss_pct, 1),
                 "threshold_pct": self._stop_loss_pct * 100,
             })
+
+            # ── Telegram stop loss alert ──────────────────────────────
+            try:
+                from telegram_bot.notifier import send_stop_loss
+                s = data["state"]
+                match_name = f"{s.get('team_a','?')} vs {s.get('team_b','?')}"
+                overs = float(s.get("overs", 0))
+                score = f"{s.get('total_runs',0)}/{s.get('total_wickets',0)}"
+                if backed_team == s.get("team_a"):
+                    h_team = s.get("team_b", "")
+                else:
+                    h_team = s.get("team_a", "")
+                asyncio.create_task(send_stop_loss(
+                    team=backed_team, entry_odds=entry_odds,
+                    current_odds=current_odds, loss_pct=loss_pct,
+                    hedge_team=h_team, hedge_stake=position.total_exposure * 0.8,
+                    overs=overs, score=score, match=match_name,
+                ))
+            except Exception:
+                pass
 
             await self._execute_stop_loss(match_id, position, data, current_odds)
 
@@ -673,9 +715,10 @@ class TradingAgent:
         """
         # ── Fire Telegram notification regardless of autopilot mode ──────────
         try:
-            from telegram_bot.notifier import send_bet_call, send_bookset_call
+            from telegram_bot.notifier import send_bet_call, send_bookset_call, send_session_call
             state  = proposal.get("state", {})
-            action = proposal.get("type", "BACK").replace("VALUE_", "").replace("ENTRY", "BACK")
+            ptype  = proposal.get("type", "BACK")
+            action = ptype.replace("VALUE_", "").replace("ENTRY", "BACK")
             overs  = float(state.get("overs", 0))
             runs   = state.get("total_runs", 0)
             wkts   = state.get("total_wickets", 0)
@@ -689,6 +732,17 @@ class TradingAgent:
                     current_odds = proposal.get("odds", 0),
                     overs        = overs,
                     match        = match,
+                ))
+            elif ptype == "SESSION":
+                asyncio.create_task(send_session_call(
+                    label       = proposal.get("label", ""),
+                    side        = proposal.get("side", "YES"),
+                    stake       = float(proposal.get("stake", 0)),
+                    confidence  = float(proposal.get("confidence", 0)),
+                    reasoning   = proposal.get("reasoning", ""),
+                    overs       = overs,
+                    score       = score,
+                    match       = match,
                 ))
             else:
                 asyncio.create_task(send_bet_call(
