@@ -67,6 +67,15 @@ class OddsScraper:
 
             # ── Live path: RoyalBook scraper ──────────────────────────────
             rb = getattr(self, '_rb', None)
+            # Auto-navigate if no active match yet (match may have gone live after startup)
+            if rb and not rb._active_match_url:
+                try:
+                    matches = await rb.get_live_cricket_matches()
+                    if matches:
+                        await rb.navigate_to_match(matches[0]["url"])
+                        logger.info(f"OddsScraper: auto-navigated to {matches[0].get('title', matches[0]['url'])}")
+                except Exception as _nav_err:
+                    logger.debug(f"Auto-navigate attempt failed: {_nav_err}")
             if rb and rb._active_match_url:
                 try:
                     raw = await rb.scrape_match_odds()
