@@ -182,23 +182,63 @@ class RoyalBookExchange:
             # ── Always click "Phone Number" tab explicitly ────────────────
             # Default tab may be Username — must switch to Phone Number when using phone login
             if self.username.isdigit():
+                # Log all clickable elements near the login form for debugging
+                tab_els = await p.evaluate("""() => {
+                    const els = [...document.querySelectorAll('button, a, span, li, div, label, input')];
+                    return els
+                        .filter(e => {
+                            const t = (e.innerText || e.textContent || e.value || e.placeholder || '').toLowerCase();
+                            return t.includes('phone') || t.includes('mobile') || t.includes('tab') || t.includes('user');
+                        })
+                        .slice(0, 10)
+                        .map(e => ({tag: e.tagName, text: (e.innerText||e.textContent||'').trim().slice(0,40), cls: e.className.slice(0,60)}));
+                }""")
+                logger.info(f"Phone/tab candidates: {tab_els}")
+
+                clicked_tab = False
                 for tab_sel in [
                     'button:has-text("Phone Number")',
                     'a:has-text("Phone Number")',
                     'span:has-text("Phone Number")',
                     'li:has-text("Phone Number")',
                     '[class*="tab"]:has-text("Phone")',
+                    'button:has-text("Mobile")',
+                    'a:has-text("Mobile")',
+                    'span:has-text("Mobile")',
+                    '[class*="tab"]:has-text("Mobile")',
+                    'button:has-text("Phone")',
+                    'a:has-text("Phone")',
                     'option[value*="phone" i]',
+                    'option[value*="mobile" i]',
                 ]:
                     try:
                         el = await p.query_selector(tab_sel)
                         if el:
                             await el.click(timeout=2000)
                             logger.info(f"Clicked Phone Number tab: {tab_sel}")
-                            await p.wait_for_timeout(500)
+                            await p.wait_for_timeout(800)
+                            clicked_tab = True
                             break
                     except Exception:
                         continue
+                if not clicked_tab:
+                    # Fallback: try clicking second tab via JS (Phone is usually 2nd tab)
+                    clicked_tab = await p.evaluate("""() => {
+                        const tabs = [...document.querySelectorAll('[class*="tab"], [role="tab"], nav a, nav button, .nav-item, .tab-item')];
+                        if (tabs.length >= 2) { tabs[1].click(); return true; }
+                        // Try any element with "phone" in text (case insensitive)
+                        const all = [...document.querySelectorAll('*')];
+                        for (const el of all) {
+                            const t = (el.innerText || '').trim().toLowerCase();
+                            if ((t === 'phone number' || t === 'mobile' || t === 'phone') && el.children.length === 0) {
+                                el.click(); return true;
+                            }
+                        }
+                        return false;
+                    }""")
+                    if clicked_tab:
+                        logger.info("Clicked Phone tab via JS fallback")
+                        await p.wait_for_timeout(800)
             else:
                 for tab_sel in [
                     'button:has-text("Username")', 'a:has-text("Username")',
