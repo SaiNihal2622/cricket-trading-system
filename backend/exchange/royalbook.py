@@ -57,6 +57,7 @@ class RoyalBookExchange:
         self._page:    Optional[Page]            = None
 
         self._logged_in         = False
+        self._demo_mode         = False   # True when logged in via Demo (can't place bets)
         self._last_odds: dict   = {}
         self._active_match_url: Optional[str] = None
         self._login_attempts    = 0
@@ -80,20 +81,23 @@ class RoyalBookExchange:
         # First verify the site is reachable at all
         await self.check_site_accessible()
 
+        import platform
         self._pw      = await async_playwright().start()
+        args = [
+            "--no-sandbox",
+            "--disable-blink-features=AutomationControlled",
+            "--disable-dev-shm-usage",
+            "--disable-web-security",
+            "--disable-setuid-sandbox",
+            "--window-size=1440,900",
+        ]
+        # --single-process crashes on Windows; only use on Linux (Railway)
+        if platform.system() == "Linux":
+            args += ["--single-process", "--disable-gpu", "--disable-software-rasterizer"]
+
         self._browser = await self._pw.chromium.launch(
             headless=self.headless,
-            args=[
-                "--no-sandbox",
-                "--disable-blink-features=AutomationControlled",
-                "--disable-dev-shm-usage",
-                "--disable-web-security",
-                "--disable-setuid-sandbox",
-                "--single-process",
-                "--disable-gpu",
-                "--disable-software-rasterizer",
-                "--window-size=1440,900",
-            ],
+            args=args,
         )
         self._ctx = await self._browser.new_context(
             user_agent=(
@@ -133,6 +137,16 @@ class RoyalBookExchange:
                     : origQuery(params);
         """)
         self._page = await self._ctx.new_page()
+
+        # Intercept all requests to ensure Origin + Referer headers are present
+        # (RoyalBook login API rejects requests missing Origin header)
+        async def _add_origin(route, request):
+            headers = {**request.headers,
+                       "Origin": "https://royalbook.win",
+                       "Referer": "https://royalbook.win/login"}
+            await route.continue_(headers=headers)
+
+        await self._page.route("**/*", _add_origin)
         await self._login()
 
     async def stop(self):
@@ -164,6 +178,24 @@ class RoyalBookExchange:
                 logger.info("RoyalBook: already logged in via cookie ✅")
                 self._logged_in = True
                 return
+
+            # ── Click "Username" / "User ID" tab if present ─────────────────
+            # RoyalBook has "Login with: [Username] [Phone Number]" tabs
+            for tab_sel in [
+                'a:has-text("Username")', 'button:has-text("Username")',
+                'span:has-text("Username")', '[class*="tab"]:has-text("Username")',
+                'a:has-text("User ID")', 'button:has-text("User ID")',
+                'li:has-text("Username")', 'li:has-text("User ID")',
+            ]:
+                try:
+                    el = await p.query_selector(tab_sel)
+                    if el:
+                        await el.click(timeout=2000)
+                        logger.info(f"Clicked login tab: {tab_sel}")
+                        await p.wait_for_timeout(500)
+                        break
+                except Exception:
+                    continue
 
             # ── Fill username (type like a human, not instant fill) ─────────
             user_filled = False
@@ -246,10 +278,28 @@ class RoyalBookExchange:
                         continue
 
             self._logged_in = login_gone
+            self._demo_mode = False
             logger.info(
                 f"RoyalBook login: {'✅ SUCCESS' if self._logged_in else '❌ FAILED'} "
                 f"→ {final_url}"
             )
+
+            # If credential login failed, fall back to Demo login
+            if not self._logged_in:
+                logger.warning("Credentials failed — trying Demo login as fallback (odds scraping only)")
+                try:
+                    await p.goto(self.LOGIN_URL, wait_until="networkidle", timeout=20000)
+                    await p.wait_for_timeout(1000)
+                    demo_btn = await p.query_selector('button:has-text("Demo login"), button:has-text("Demo Login"), a:has-text("Demo")')
+                    if demo_btn:
+                        await demo_btn.click()
+                        await p.wait_for_timeout(3000)
+                        if "login" not in p.url.lower():
+                            self._logged_in = True
+                            self._demo_mode = True
+                            logger.info("RoyalBook: DEMO LOGIN active (odds scraping only — no real bets)")
+                except Exception as de:
+                    logger.debug(f"Demo login also failed: {de}")
 
             # Screenshot debug on failure
             if not self._logged_in:
@@ -571,6 +621,9 @@ class RoyalBookExchange:
 
     async def _fill_and_place(self, stake: float) -> dict:
         """Fill stake field and click Place Bet. Returns success status."""
+        if self._demo_mode:
+            logger.warning("DEMO MODE — bet skipped (no real account). Register on royalbook.win to enable live betting.")
+            return {"ok": False, "demo": True, "reason": "Demo mode — register account first"}
         p = self._page
         await p.wait_for_timeout(700)
 
