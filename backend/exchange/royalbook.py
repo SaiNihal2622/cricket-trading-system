@@ -179,13 +179,30 @@ class RoyalBookExchange:
                 self._logged_in = True
                 return
 
-            # ── Login tab: Phone Number (default) or Username ─────────────
-            # The account uses Phone Number login — default tab is already correct.
-            # Only switch to Username tab if username looks like a username (not digits).
-            if not self.username.isdigit():
+            # ── Always click "Phone Number" tab explicitly ────────────────
+            # Default tab may be Username — must switch to Phone Number when using phone login
+            if self.username.isdigit():
                 for tab_sel in [
-                    'a:has-text("Username")', 'button:has-text("Username")',
-                    'span:has-text("Username")', '[class*="tab"]:has-text("Username")',
+                    'button:has-text("Phone Number")',
+                    'a:has-text("Phone Number")',
+                    'span:has-text("Phone Number")',
+                    'li:has-text("Phone Number")',
+                    '[class*="tab"]:has-text("Phone")',
+                    'option[value*="phone" i]',
+                ]:
+                    try:
+                        el = await p.query_selector(tab_sel)
+                        if el:
+                            await el.click(timeout=2000)
+                            logger.info(f"Clicked Phone Number tab: {tab_sel}")
+                            await p.wait_for_timeout(500)
+                            break
+                    except Exception:
+                        continue
+            else:
+                for tab_sel in [
+                    'button:has-text("Username")', 'a:has-text("Username")',
+                    'span:has-text("Username")', 'li:has-text("Username")',
                     'a:has-text("User ID")', 'button:has-text("User ID")',
                 ]:
                     try:
@@ -197,11 +214,8 @@ class RoyalBookExchange:
                             break
                     except Exception:
                         continue
-            else:
-                logger.info("Phone Number login detected — keeping default Phone Number tab")
 
-            # ── Fill phone/username (type like a human) ────────────────────
-            # Phone number field uses different placeholder than username
+            # ── Fill phone/username ────────────────────────────────────────
             phone_sels = [
                 'input[placeholder*="Phone" i]',
                 'input[placeholder*="phone" i]',
