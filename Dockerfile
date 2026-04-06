@@ -52,7 +52,7 @@ stderr_logfile=/dev/stderr\nstderr_logfile_maxbytes=0\n' \
 
 # ── Startup script (sets nginx port from $PORT) ───────────────────────────────
 COPY start.sh /start.sh
-RUN chmod +x /start.sh
+RUN sed -i 's/\r//' /start.sh && chmod +x /start.sh
 
 EXPOSE 8080
 

@@ -1,41 +1,43 @@
-#!/bin/bash
-# Startup script: use Railway $PORT for nginx, fallback to 80
-set -e
+#!/bin/sh
+# start.sh - write nginx config with dynamic $PORT then launch supervisord
+PORT="${PORT:-8080}"
+echo "Starting services on port ${PORT}..."
 
-PORT="${PORT:-80}"
-
-# Write nginx config with dynamic port
-cat > /etc/nginx/sites-available/default << NGINX
-server {
-    listen ${PORT};
+python3 - <<PYEOF
+import os, textwrap
+port = os.environ.get("PORT", "8080")
+cfg = textwrap.dedent(f"""
+server {{
+    listen {port};
     root /app/frontend/build;
     index index.html;
 
-    location /api/ {
+    location /api/ {{
         proxy_pass http://127.0.0.1:8000;
         proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection "upgrade";
         proxy_set_header Host \$host;
         proxy_read_timeout 300;
-    }
-    location /ws {
+    }}
+    location /ws {{
         proxy_pass http://127.0.0.1:8000;
         proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection "upgrade";
         proxy_read_timeout 3600;
-    }
-    location /health {
+    }}
+    location /health {{
         proxy_pass http://127.0.0.1:8000;
-    }
-    location / {
+    }}
+    location / {{
         try_files \$uri /index.html;
-    }
-}
-NGINX
+    }}
+}}
+""").strip()
+with open("/etc/nginx/sites-available/default", "w") as f:
+    f.write(cfg)
+print(f"nginx config written for port {port}")
+PYEOF
 
-echo "Starting services on port ${PORT}..."
-
-# Start supervisor (manages nginx + uvicorn)
 exec /usr/bin/supervisord -c /etc/supervisor/conf.d/app.conf
