@@ -265,10 +265,19 @@ class RoyalBookExchange:
             user_filled = False
             for sel in (phone_sels + self._USER_SELS):
                 try:
+                    # click → triple-click to select all → type character by character
+                    # React controlled inputs need real key events to update state
                     await p.click(sel, timeout=3000)
+                    await p.wait_for_timeout(300)
+                    await p.triple_click(sel, timeout=2000)
+                    await p.keyboard.press("Backspace")
                     await p.wait_for_timeout(200)
-                    await p.type(sel, self.username, delay=80)  # 80ms per char
-                    logger.info(f"Username typed via: {sel}")
+                    # Type slowly so React's onChange fires per keystroke
+                    for ch in self.username:
+                        await p.keyboard.type(ch)
+                        await p.wait_for_timeout(60)
+                    filled_val = await p.input_value(sel)
+                    logger.info(f"Username typed via: {sel} (value len={len(filled_val)})")
                     user_filled = True
                     break
                 except Exception:
@@ -281,15 +290,21 @@ class RoyalBookExchange:
                 except Exception:
                     pass
 
-            await p.wait_for_timeout(600)
+            await p.wait_for_timeout(800)
 
             # ── Fill password (human-like typing) ───────────────────────────
             for sel in self._PASS_SELS:
                 try:
                     await p.click(sel, timeout=3000)
+                    await p.wait_for_timeout(300)
+                    await p.triple_click(sel, timeout=2000)
+                    await p.keyboard.press("Backspace")
                     await p.wait_for_timeout(200)
-                    await p.type(sel, self.password, delay=80)
-                    logger.info(f"Password typed via: {sel}")
+                    for ch in self.password:
+                        await p.keyboard.type(ch)
+                        await p.wait_for_timeout(60)
+                    filled_val = await p.input_value(sel)
+                    logger.info(f"Password typed via: {sel} (value len={len(filled_val)})")
                     break
                 except Exception:
                     continue
@@ -320,11 +335,12 @@ class RoyalBookExchange:
                     except Exception:
                         continue
 
-            # Wait for navigation after submit
+            # Wait for navigation after submit — give React time to process
+            await p.wait_for_timeout(2000)
             try:
-                await p.wait_for_load_state("networkidle", timeout=25000)
+                await p.wait_for_load_state("networkidle", timeout=20000)
             except Exception:
-                await p.wait_for_timeout(4000)
+                await p.wait_for_timeout(3000)
 
             final_url = p.url
             # Success = URL changed away from /login
