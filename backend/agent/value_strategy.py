@@ -285,9 +285,10 @@ class ValueStrategyEngine:
     def _kelly_stake(self, ev: float, odds: float, tier: str) -> float:
         """
         Kelly criterion stake, scaled by tier.
-        Scalp: cap 2% (low odds, tight margin)
-        Mid:   cap 4%
-        High:  cap 6% (high upside justifies larger bet)
+        Scalp: cap 15% (short-odds scalp plays — small margin, need meaningful stake)
+        Mid:   cap 20%
+        High:  cap 25% (high upside justifies larger bet)
+        Half-Kelly for safety.
         """
         if ev <= 0 or odds <= 1:
             return 0.0
@@ -296,9 +297,9 @@ class ValueStrategyEngine:
         q = 1 - p
         kelly = (b * p - q) / b if b > 0 else 0
 
-        caps = {"scalp": (0.005, 0.02), "mid": (0.005, 0.04), "high": (0.005, 0.06)}
-        lo, hi = caps.get(tier, (0.005, 0.04))
-        return round(max(lo, min(hi, kelly * 0.25)), 3)  # quarter-Kelly
+        caps = {"scalp": (0.02, 0.15), "mid": (0.02, 0.20), "high": (0.02, 0.25)}
+        lo, hi = caps.get(tier, (0.02, 0.20))
+        return round(max(lo, min(hi, kelly * 0.50)), 3)  # half-Kelly
 
     def get_anti_panic_signal(self, state: dict, position, odds_a: float, odds_b: float) -> Optional[str]:
         """Returns 'HOLD', 'CUT', or None after a wicket."""
