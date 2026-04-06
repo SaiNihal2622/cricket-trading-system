@@ -669,7 +669,46 @@ class TradingAgent:
         Route a trade proposal:
         - Autopilot: execute immediately
         - Semi-auto: publish for user approval, wait 30s
+        Always fires a Telegram signal so the user can place manually.
         """
+        # ── Fire Telegram notification regardless of autopilot mode ──────────
+        try:
+            from telegram_bot.notifier import send_bet_call, send_bookset_call
+            state  = proposal.get("state", {})
+            action = proposal.get("type", "BACK").replace("VALUE_", "").replace("ENTRY", "BACK")
+            overs  = float(state.get("overs", 0))
+            runs   = state.get("total_runs", 0)
+            wkts   = state.get("total_wickets", 0)
+            score  = f"{runs}/{wkts}"
+            match  = f"{state.get('team_a','?')} vs {state.get('team_b','?')}"
+
+            if action == "PROGRESSIVE_BOOKSET":
+                asyncio.create_task(send_bookset_call(
+                    team         = proposal.get("team", ""),
+                    entry_odds   = proposal.get("odds", 0),
+                    current_odds = proposal.get("odds", 0),
+                    overs        = overs,
+                    match        = match,
+                ))
+            else:
+                asyncio.create_task(send_bet_call(
+                    action      = action,
+                    team        = proposal.get("team", ""),
+                    odds        = float(proposal.get("odds", 0)),
+                    stake       = float(proposal.get("stake", 0)),
+                    ev          = float(proposal.get("ev", 0)),
+                    confidence  = float(proposal.get("confidence", 0)),
+                    reasoning   = proposal.get("reasoning", ""),
+                    overs       = overs,
+                    score       = score,
+                    bookset_at  = float(proposal.get("bookset_at", 0) or 0),
+                    stop_loss   = float(proposal.get("stop_loss_at", 0) or 0),
+                    tier        = proposal.get("odds_tier", "mid"),
+                    match       = match,
+                ))
+        except Exception as _tg_err:
+            logger.debug(f"Telegram notify error: {_tg_err}")
+
         if self._autopilot:
             await executor(proposal)
         else:

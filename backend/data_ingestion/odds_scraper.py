@@ -73,7 +73,17 @@ class OddsScraper:
                     matches = await rb.get_live_cricket_matches()
                     if matches:
                         await rb.navigate_to_match(matches[0]["url"])
-                        logger.info(f"OddsScraper: auto-navigated to {matches[0].get('title', matches[0]['url'])}")
+                        title = matches[0].get('title', matches[0]['url'])
+                        logger.info(f"OddsScraper: auto-navigated to {title}")
+                        # Notify user on Telegram
+                        try:
+                            from telegram_bot.notifier import send_info
+                            import asyncio
+                            asyncio.create_task(send_info(
+                                f"Match found on RoyalBook: **{title}** — bot is now live!"
+                            ))
+                        except Exception:
+                            pass
                 except Exception as _nav_err:
                     logger.debug(f"Auto-navigate attempt failed: {_nav_err}")
             if rb and rb._active_match_url:

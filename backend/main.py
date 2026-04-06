@@ -94,6 +94,20 @@ async def lifespan(app: FastAPI):
     app.state.telegram_bot = telegram_bot
     app.state.trading_agent = trading_agent
 
+    # ── Startup ping on Telegram ──────────────────────────────────────────────
+    try:
+        from telegram_bot.notifier import send_info
+        rb_status = "✅ RoyalBook connected" if rb_instance else "⚠️ RoyalBook offline"
+        asyncio.create_task(send_info(
+            f"🏏 Bot restarted — watching for IPL matches\n"
+            f"{rb_status} | Mode: {settings.AGENT_MODE.upper()}\n"
+            f"Bankroll: ₹{getattr(settings, 'INITIAL_BANKROLL', '?')} | "
+            f"Max stake: ₹{getattr(settings, 'MAX_STAKE_PER_TRADE', '?')}\n"
+            f"Signals will arrive here. Place bets manually on RoyalBook."
+        ))
+    except Exception:
+        pass
+
     yield
 
     # Shutdown
