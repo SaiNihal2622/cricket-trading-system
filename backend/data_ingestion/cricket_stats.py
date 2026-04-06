@@ -75,11 +75,9 @@ class CricketStatsService:
 
     CRICBUZZ_BASE = "https://www.cricbuzz.com"
     # Try multiple live-match API endpoints in order (Cricbuzz changes these)
-    CRICBUZZ_LIVE_URLS = [
-        "https://www.cricbuzz.com/api/cricket-match/live-matches",
-        "https://www.cricbuzz.com/api/html/series-stats/live-matches",
-        "https://www.cricbuzz.com/matches/live-matches",
-    ]
+    # All JSON APIs return 404 as of Apr 2026 — Cricbuzz is now fully CSR.
+    # We rely on HTML scraping only. RoyalBook provides live match data.
+    CRICBUZZ_LIVE_URLS = []  # disabled — all return 404
     CRICBUZZ_LIVE_HTML = "https://www.cricbuzz.com/cricket-match/live-scores"
     CRICBUZZ_MATCH = "https://www.cricbuzz.com/api/cricket-match/{match_id}/scorecard"
 

@@ -303,14 +303,18 @@ class LiveFeedManager:
                 if self._data_source == "cricapi":
                     await self._fetch_cricapi_data()
                 else:
-                    # Try Cricbuzz JSON API first (no key needed)
-                    got_live = await self._fetch_cricbuzz_json()
+                    # Cricbuzz JSON APIs are dead (404 since 2026).
+                    # Try HTML scraping → mock fallback.
+                    # Primary live data comes from RoyalBook scraper.
+                    got_live = False
+                    try:
+                        got_live = await self._fetch_cricbuzz_json()
+                    except Exception:
+                        pass
                     if not got_live:
-                        # Try HTML scraping
                         try:
                             await self._fetch_live_data()
                         except Exception:
-                            # Final fallback: mock
                             await self._fetch_mock_data()
             except Exception as e:
                 logger.error(f"Poll loop error: {e}")

@@ -623,7 +623,8 @@ class RoyalBookExchange:
         p = self._page
 
         try:
-            await p.goto(self.CRICKET_URL, wait_until="networkidle", timeout=25000)
+            await p.goto(self.CRICKET_URL, wait_until="domcontentloaded", timeout=25000)
+            await p.wait_for_timeout(5000)  # let React render match cards
             await p.wait_for_timeout(3000)
             await self._dismiss_modal()
 
