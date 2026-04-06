@@ -161,14 +161,19 @@ class RoyalBookExchange:
     # ── Auth ─────────────────────────────────────────────────────────────────
 
     async def _login(self):
-        """Full login flow with robust selector fallbacks + screenshot on failure."""
+        """Login flow — tries DEMO first (for odds scraping), credentials as fallback."""
         p = self._page
         self._login_attempts += 1
         logger.info(f"RoyalBook login attempt #{self._login_attempts}")
 
         try:
             await p.goto(self.LOGIN_URL, wait_until="domcontentloaded", timeout=35000)
-            await p.wait_for_timeout(2500)
+            await p.wait_for_timeout(3000)  # let React fully render
+
+            # ── Try DEMO login first (fastest, no credentials needed) ──────
+            demo_success = await self._try_demo_login_inline()
+            if demo_success:
+                return
 
             current_url = p.url
             logger.info(f"Login page loaded: {current_url}")
@@ -385,6 +390,78 @@ class RoyalBookExchange:
         except Exception as e:
             logger.error(f"Login error: {e}")
             self._logged_in = False
+
+    async def _try_demo_login_inline(self) -> bool:
+        """
+        Quick demo login attempt on the already-loaded login page.
+        The "Demo login" button is a <button> right below the Login button.
+        Returns True if demo login succeeded.
+        """
+        p = self._page
+        logger.info("Trying DEMO login (priority — for live odds scraping)...")
+
+        try:
+            # Strategy 1: Playwright text selector
+            for sel in [
+                'button:has-text("Demo login")',
+                'button:has-text("Demo Login")',
+                'button:has-text("DEMO")',
+                'text="Demo login"',
+            ]:
+                try:
+                    el = await p.wait_for_selector(sel, timeout=3000, state="visible")
+                    if el:
+                        await el.click()
+                        logger.info(f"Demo button clicked via: {sel}")
+                        # Wait for navigation
+                        for _ in range(20):
+                            await p.wait_for_timeout(500)
+                            if "login" not in p.url.lower():
+                                self._logged_in = True
+                                self._demo_mode = True
+                                logger.info(f"RoyalBook DEMO LOGIN ✅ → {p.url}")
+                                return True
+                        logger.warning(f"Demo click didn't navigate, URL still: {p.url}")
+                        return False
+                except Exception:
+                    continue
+
+            # Strategy 2: JS — find any button/a with "demo" in its text
+            clicked = await p.evaluate("""() => {
+                const all = [...document.querySelectorAll('button, a, div[role="button"]')];
+                for (const el of all) {
+                    const t = (el.innerText || el.textContent || '').trim().toLowerCase();
+                    if (t.includes('demo')) {
+                        el.click();
+                        return t;
+                    }
+                }
+                return null;
+            }""")
+            if clicked:
+                logger.info(f"Demo button clicked via JS: '{clicked}'")
+                for _ in range(20):
+                    await p.wait_for_timeout(500)
+                    if "login" not in p.url.lower():
+                        self._logged_in = True
+                        self._demo_mode = True
+                        logger.info(f"RoyalBook DEMO LOGIN ✅ → {p.url}")
+                        return True
+                logger.warning(f"JS demo click didn't navigate, URL: {p.url}")
+
+            # Strategy 3: Log all visible buttons for debugging
+            btns = await p.evaluate("""() =>
+                [...document.querySelectorAll('button, a')]
+                    .map(b => ({tag: b.tagName, text: (b.innerText||'').trim().slice(0,40), vis: b.offsetWidth > 0}))
+                    .filter(b => b.text)
+                    .slice(0, 15)
+            """)
+            logger.warning(f"Demo button NOT found. Page buttons: {btns}")
+            return False
+
+        except Exception as e:
+            logger.error(f"Demo login error: {e}")
+            return False
 
     async def _try_demo_login(self):
         """
