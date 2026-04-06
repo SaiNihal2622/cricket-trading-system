@@ -179,27 +179,37 @@ class RoyalBookExchange:
                 self._logged_in = True
                 return
 
-            # ── Click "Username" / "User ID" tab if present ─────────────────
-            # RoyalBook has "Login with: [Username] [Phone Number]" tabs
-            for tab_sel in [
-                'a:has-text("Username")', 'button:has-text("Username")',
-                'span:has-text("Username")', '[class*="tab"]:has-text("Username")',
-                'a:has-text("User ID")', 'button:has-text("User ID")',
-                'li:has-text("Username")', 'li:has-text("User ID")',
-            ]:
-                try:
-                    el = await p.query_selector(tab_sel)
-                    if el:
-                        await el.click(timeout=2000)
-                        logger.info(f"Clicked login tab: {tab_sel}")
-                        await p.wait_for_timeout(500)
-                        break
-                except Exception:
-                    continue
+            # ── Login tab: Phone Number (default) or Username ─────────────
+            # The account uses Phone Number login — default tab is already correct.
+            # Only switch to Username tab if username looks like a username (not digits).
+            if not self.username.isdigit():
+                for tab_sel in [
+                    'a:has-text("Username")', 'button:has-text("Username")',
+                    'span:has-text("Username")', '[class*="tab"]:has-text("Username")',
+                    'a:has-text("User ID")', 'button:has-text("User ID")',
+                ]:
+                    try:
+                        el = await p.query_selector(tab_sel)
+                        if el:
+                            await el.click(timeout=2000)
+                            logger.info(f"Clicked Username tab: {tab_sel}")
+                            await p.wait_for_timeout(500)
+                            break
+                    except Exception:
+                        continue
+            else:
+                logger.info("Phone Number login detected — keeping default Phone Number tab")
 
-            # ── Fill username (type like a human, not instant fill) ─────────
+            # ── Fill phone/username (type like a human) ────────────────────
+            # Phone number field uses different placeholder than username
+            phone_sels = [
+                'input[placeholder*="Phone" i]',
+                'input[placeholder*="phone" i]',
+                'input[type="tel"]',
+            ] if self.username.isdigit() else []
+
             user_filled = False
-            for sel in self._USER_SELS:
+            for sel in (phone_sels + self._USER_SELS):
                 try:
                     await p.click(sel, timeout=3000)
                     await p.wait_for_timeout(200)
