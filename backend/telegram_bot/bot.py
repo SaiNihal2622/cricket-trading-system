@@ -202,8 +202,18 @@ class TelegramBot:
             from telethon import TelegramClient, events
             from telethon.tl.types import Channel, Chat
 
+            # Use StringSession from env (for Railway) or file session (local)
+            session_str = getattr(settings, "TELEGRAM_SESSION", None)
+            if session_str:
+                from telethon.sessions import StringSession
+                session = StringSession(session_str)
+                logger.info("Telegram: using StringSession from env var")
+            else:
+                session = "cricket_signal_listener"
+                logger.info("Telegram: using file-based session")
+
             self.client = TelegramClient(
-                "cricket_signal_listener",
+                session,
                 int(settings.TELEGRAM_API_ID),
                 settings.TELEGRAM_API_HASH,
             )

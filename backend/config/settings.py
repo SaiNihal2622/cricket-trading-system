@@ -29,6 +29,8 @@ class Settings(BaseSettings):
     TELEGRAM_BOT_TOKEN: str = ""
     TELEGRAM_CHANNELS: List[str] = []
     TELEGRAM_ALERT_CHAT_ID: str = ""
+    TELEGRAM_SESSION: str = ""   # StringSession string for Railway (no TTY)
+    TELEGRAM_PHONE: str = ""
 
     # Cricket API
     CRICBUZZ_BASE_URL: str = "https://www.cricbuzz.com"
