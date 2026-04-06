@@ -286,20 +286,7 @@ class RoyalBookExchange:
 
             # If credential login failed, fall back to Demo login
             if not self._logged_in:
-                logger.warning("Credentials failed — trying Demo login as fallback (odds scraping only)")
-                try:
-                    await p.goto(self.LOGIN_URL, wait_until="networkidle", timeout=20000)
-                    await p.wait_for_timeout(1000)
-                    demo_btn = await p.query_selector('button:has-text("Demo login"), button:has-text("Demo Login"), a:has-text("Demo")')
-                    if demo_btn:
-                        await demo_btn.click()
-                        await p.wait_for_timeout(3000)
-                        if "login" not in p.url.lower():
-                            self._logged_in = True
-                            self._demo_mode = True
-                            logger.info("RoyalBook: DEMO LOGIN active (odds scraping only — no real bets)")
-                except Exception as de:
-                    logger.debug(f"Demo login also failed: {de}")
+                await self._try_demo_login()
 
             # Screenshot debug on failure
             if not self._logged_in:
@@ -318,6 +305,72 @@ class RoyalBookExchange:
         except Exception as e:
             logger.error(f"Login error: {e}")
             self._logged_in = False
+
+    async def _try_demo_login(self):
+        """
+        Dedicated demo login flow — loads a fresh login page and clicks Demo button.
+        Sets self._logged_in + self._demo_mode on success.
+        """
+        p = self._page
+        logger.warning("Trying Demo login (odds scraping only, no real bets)...")
+        try:
+            # Hard reload to flush any error state from credential attempt
+            await p.goto("about:blank", timeout=5000)
+            await p.wait_for_timeout(500)
+            await p.goto(self.LOGIN_URL, wait_until="domcontentloaded", timeout=20000)
+            await p.wait_for_timeout(2000)
+
+            # Find demo button
+            demo_btn = None
+            for demo_sel in [
+                'button:has-text("Demo login")',
+                'button:has-text("Demo Login")',
+                'button:has-text("DEMO LOGIN")',
+                'button:has-text("Demo")',
+                'a:has-text("Demo login")',
+            ]:
+                try:
+                    el = await p.query_selector(demo_sel)
+                    if el and await el.is_visible():
+                        demo_btn = el
+                        logger.info(f"Demo button found via: {demo_sel}")
+                        break
+                except Exception:
+                    continue
+
+            if not demo_btn:
+                # Last resort: find via JS text scan
+                demo_btn_clicked = await p.evaluate("""() => {
+                    const btns = [...document.querySelectorAll('button, a')];
+                    const b = btns.find(b => /demo/i.test(b.innerText));
+                    if (b) { b.click(); return true; }
+                    return false;
+                }""")
+                if demo_btn_clicked:
+                    logger.info("Demo button clicked via JS text scan")
+                    await p.wait_for_timeout(6000)
+                    if "login" not in p.url.lower():
+                        self._logged_in = True
+                        self._demo_mode = True
+                        logger.info("RoyalBook: DEMO LOGIN active via JS click ✅")
+                    return
+
+            if demo_btn:
+                await demo_btn.click()
+                logger.info("Demo button clicked — waiting for navigation...")
+                # Poll URL for up to 10 seconds
+                for _ in range(20):
+                    await p.wait_for_timeout(500)
+                    if "login" not in p.url.lower():
+                        self._logged_in = True
+                        self._demo_mode = True
+                        logger.info(f"RoyalBook: DEMO LOGIN active ✅ → {p.url}")
+                        return
+                logger.warning(f"Demo login clicked but URL still: {p.url}")
+            else:
+                logger.warning("Demo login button not found on page")
+        except Exception as e:
+            logger.error(f"_try_demo_login error: {e}")
 
     async def is_logged_in(self) -> bool:
         """
@@ -355,48 +408,204 @@ class RoyalBookExchange:
             await self._login()
         return self._logged_in
 
+    # ── Modal Dismiss ────────────────────────────────────────────────────────
+
+    async def _dismiss_modal(self):
+        """Close any popup/overlay that would block clicks."""
+        p = self._page
+        try:
+            # Press Escape — closes most modals
+            await p.keyboard.press("Escape")
+            await p.wait_for_timeout(300)
+
+            # Try clicking a close button inside the modal
+            for close_sel in [
+                'button:has-text("Close")', 'button:has-text("×")',
+                '[class*="close" i] button', 'button[aria-label*="close" i]',
+                '[class*="modal" i] [class*="close" i]',
+                'svg[class*="close" i]',
+            ]:
+                try:
+                    el = await p.query_selector(close_sel)
+                    if el and await el.is_visible():
+                        await el.click(timeout=1500)
+                        await p.wait_for_timeout(400)
+                        break
+                except Exception:
+                    continue
+
+            # Force-remove via JS if it's still there
+            await p.evaluate("""() => {
+                // Remove fixed/absolute overlays with high z-index
+                document.querySelectorAll('div[class*="fixed"], div[class*="modal"], div[class*="overlay"]').forEach(el => {
+                    const style = window.getComputedStyle(el);
+                    const z = parseInt(style.zIndex) || 0;
+                    if (z > 50 && style.position === 'fixed') {
+                        el.remove();
+                    }
+                });
+                // Also remove body scroll locks
+                document.body.style.overflow = '';
+                document.body.style.position = '';
+            }""")
+            await p.wait_for_timeout(200)
+        except Exception:
+            pass
+
     # ── Match Discovery ──────────────────────────────────────────────────────
 
     async def get_live_cricket_matches(self) -> list:
         """
-        Get all live cricket matches — IPL matches prioritized.
-        Returns list of {url, title, is_ipl, is_live}
+        Get all live cricket matches — IPL first.
+        RoyalBook uses React divs with onClick (not <a href>), so we:
+        1. Parse match rows from the list page directly (includes basic odds)
+        2. Click each IPL match div to resolve its URL
+        Returns list of {url, title, is_ipl, is_live, back_a, back_b}
         """
         await self.ensure_logged_in()
         p = self._page
 
         try:
-            await p.goto(self.CRICKET_URL, wait_until="domcontentloaded", timeout=20000)
-            await p.wait_for_timeout(2000)
+            await p.goto(self.CRICKET_URL, wait_until="networkidle", timeout=25000)
+            await p.wait_for_timeout(3000)
+            await self._dismiss_modal()
 
-            links = await p.evaluate("""() => {
+            # IPL team names — full names only, no league name (avoids section headers)
+            IPL_TEAMS = [
+                'kolkata knight riders', 'punjab kings', 'mumbai indians',
+                'chennai super kings', 'rajasthan royals', 'delhi capitals',
+                'royal challengers bengaluru', 'royal challengers', 'rcb',
+                'kkr', 'csk', 'rr', 'pbks', 'mi ',
+                'sunrisers hyderabad', 'srh', 'gujarat titans', 'lucknow super giants',
+                'lsg',
+            ]
+
+            # ── Strategy 1: find <a href> match links (deep URL = match detail) ──
+            links_from_a = await p.evaluate("""(ipl_kw) => {
                 const seen = new Set();
-                const ipl_keywords = ['ipl', 'indian premier', 'mumbai', 'chennai', 'kolkata',
-                                      'rajasthan', 'delhi', 'bangalore', 'rcb', 'mi', 'csk',
-                                      'kkr', 'rr', 'dc', 'pbks', 'srh', 'gt', 'lsg', 'punjab',
-                                      'sunrisers', 'gujarat', 'lucknow'];
                 return [...document.querySelectorAll('a')]
-                    .filter(a => a.href && a.href.includes('/exchange_sports/cricket/'))
+                    .filter(a => {
+                        if (!a.href) return false;
+                        // Match detail URLs have >= 4 path segments after /exchange_sports/cricket/
+                        const path = new URL(a.href).pathname;
+                        const parts = path.split('/').filter(Boolean);
+                        return parts.length >= 5;  // /exchange_sports/cricket/league/match/id
+                    })
                     .map(a => {
-                        const title = a.innerText.trim() || a.title || '';
-                        const lower = title.toLowerCase();
-                        const is_ipl = ipl_keywords.some(k => lower.includes(k));
-                        const is_live = !!(
-                            a.closest('[class*="live" i]') ||
-                            lower.includes('live') ||
-                            a.querySelector('[class*="live" i]')
-                        );
-                        return { url: a.href, title, is_ipl, is_live };
+                        const title = a.innerText.trim();
+                        const lower = (title + a.href).toLowerCase();
+                        const is_ipl = ipl_kw.some(k => lower.includes(k));
+                        return { url: a.href, title, is_ipl, is_live: lower.includes('live') };
                     })
-                    .filter(m => {
-                        if (seen.has(m.url) || !m.title || m.title.length < 3) return false;
-                        seen.add(m.url);
-                        return true;
-                    })
-                    .sort((a, b) => (b.is_ipl - a.is_ipl) || (b.is_live - a.is_live));
-            }""")
-            logger.info(f"Found {len(links)} cricket matches ({sum(1 for l in links if l.get('is_ipl'))} IPL)")
-            return links
+                    .filter(m => m.title && !seen.has(m.url) && seen.add(m.url))
+                    .sort((a,b) => b.is_ipl - a.is_ipl);
+            }""", IPL_TEAMS)
+
+            # ── Strategy 2: parse match rows from list view ───────────────────
+            # Match rows are divs containing two team names + odds numbers
+            list_matches = await p.evaluate("""(ipl_kw) => {
+                const pf = s => { const n = parseFloat(s); return isNaN(n) ? null : n; };
+                const results = [];
+                // Match rows have two team name spans + odds
+                document.querySelectorAll('div').forEach(div => {
+                    const text = div.innerText || '';
+                    const lines = text.split('\\n').map(s => s.trim()).filter(Boolean);
+                    // Look for rows: Time, Team1, Team2, odds...
+                    if (lines.length < 4) return;
+                    const teamIdx = lines.findIndex((l, i) =>
+                        i > 0 && l.length > 3 && l.length < 60 &&
+                        ipl_kw.some(k => l.toLowerCase().includes(k))
+                    );
+                    if (teamIdx === -1 || teamIdx + 1 >= lines.length) return;
+                    const t1 = lines[teamIdx], t2 = lines[teamIdx + 1];
+                    if (t2.length < 3 || t2.length > 60) return;
+                    const oddsNums = lines.slice(teamIdx+2).map(pf).filter(n => n && n > 1 && n < 200);
+                    if (oddsNums.length < 2) return;
+                    // BOTH teams must be recognized IPL teams (not section headers)
+                    const t1lo = t1.toLowerCase(), t2lo = t2.toLowerCase();
+                    const t1ok = ipl_kw.some(k => t1lo.includes(k));
+                    const t2ok = ipl_kw.some(k => t2lo.includes(k));
+                    if (!t1ok || !t2ok) return;
+                    results.push({
+                        title: t1 + ' v ' + t2,
+                        team_a: t1, team_b: t2,
+                        is_ipl: true,
+                        is_live: text.toLowerCase().includes('live') || text.includes('In-Play'),
+                        back_a: oddsNums[0], back_b: oddsNums[oddsNums.length-1],
+                        url: null,  // filled in below by clicking
+                    });
+                });
+                // deduplicate by team pair
+                const seen = new Set();
+                return results.filter(m => {
+                    const key = m.team_a + m.team_b;
+                    return !seen.has(key) && seen.add(key);
+                });
+            }""", IPL_TEAMS)
+
+            # ── Resolve URLs by clicking each match div ───────────────────────
+            if list_matches and not links_from_a:
+                for m in list_matches[:3]:  # limit to first 3 IPL matches
+                    try:
+                        team_a = m["team_a"]
+                        team_b = m["team_b"]
+                        before_url = p.url
+
+                        # Dismiss any modal that might be blocking
+                        await self._dismiss_modal()
+
+                        # Use JS click to bypass any overlay intercepting pointer events
+                        clicked_js = await p.evaluate("""([ta, tb]) => {
+                            const allDivs = [...document.querySelectorAll('div')];
+                            // Find smallest div that contains BOTH team names
+                            let best = null;
+                            let bestSize = Infinity;
+                            for (const d of allDivs) {
+                                const txt = d.innerText || '';
+                                if (txt.includes(ta) && txt.includes(tb)) {
+                                    const len = txt.length;
+                                    if (len < bestSize) {
+                                        bestSize = len;
+                                        best = d;
+                                    }
+                                }
+                            }
+                            if (best) { best.click(); return true; }
+                            return false;
+                        }""", [team_a, team_b])
+
+                        if clicked_js:
+                            await p.wait_for_timeout(3000)
+                            new_url = p.url
+                            if new_url != before_url and "login" not in new_url.lower():
+                                m['url'] = new_url
+                                logger.info(f"Match URL resolved: {team_a} v {team_b} → {new_url}")
+                            else:
+                                logger.debug(f"JS click didn't navigate for {team_a} v {team_b} (URL unchanged)")
+                            # Go back to cricket list
+                            await p.goto(self.CRICKET_URL, wait_until="domcontentloaded", timeout=15000)
+                            await p.wait_for_timeout(2000)
+                            await self._dismiss_modal()
+                    except Exception as e:
+                        logger.debug(f"URL resolve for {m.get('team_a')}: {e}")
+                        try:
+                            await p.goto(self.CRICKET_URL, wait_until="domcontentloaded", timeout=15000)
+                            await p.wait_for_timeout(1500)
+                        except Exception:
+                            pass
+
+            # Merge results: href-based first, then list-parsed
+            all_matches = links_from_a or []
+            for m in list_matches:
+                if m.get('url') and not any(x['url'] == m['url'] for x in all_matches):
+                    all_matches.append(m)
+                elif not m.get('url') and not any(x['title'] == m['title'] for x in all_matches):
+                    all_matches.append(m)
+
+            ipl_count = sum(1 for m in all_matches if m.get('is_ipl'))
+            logger.info(f"Found {len(all_matches)} cricket matches ({ipl_count} IPL)")
+            return all_matches
+
         except Exception as e:
             logger.error(f"get_live_cricket_matches: {e}")
             return []
@@ -409,6 +618,7 @@ class RoyalBookExchange:
         try:
             await self._page.goto(url, wait_until="domcontentloaded", timeout=25000)
             await self._page.wait_for_timeout(2000)
+            await self._dismiss_modal()
             self._active_match_url = url
             logger.info(f"RoyalBook → {url}")
         except Exception as e:
@@ -455,119 +665,145 @@ class RoyalBookExchange:
                     match_title: '', score: ''
                 };
 
+                // Extract FIRST valid number from a (possibly multi-line) string
                 const pf = t => {
                     if (!t) return null;
-                    const v = parseFloat((t + '').replace(/[^0-9.]/g, ''));
-                    return isNaN(v) || v === 0 ? null : v;
+                    const m = (t + '').match(/[\\d]+(?:\\.[\\d]+)?/);
+                    if (!m) return null;
+                    const v = parseFloat(m[0]);
+                    return isNaN(v) ? null : v;
                 };
 
-                // ── Match title & score ────────────────────────────────────
-                const titleEl = document.querySelector('h1, h2, [class*="match-title" i], [class*="matchTitle"]');
-                if (titleEl) data.match_title = titleEl.innerText.trim().substring(0, 100);
+                // ── Match title ────────────────────────────────────────────
+                // RoyalBook shows "Team A vs Team B" in a heading or breadcrumb
+                const lines = document.body.innerText.split('\\n').map(s => s.trim()).filter(Boolean);
+                const vsIdx = lines.findIndex(l => /\\bvs\\b/i.test(l) || l.includes(' v '));
+                if (vsIdx !== -1) data.match_title = lines[vsIdx];
 
-                const scoreEl = document.querySelector('[class*="score" i], [class*="Score"], .score-board');
-                if (scoreEl) data.score = scoreEl.innerText.trim().replace(/\\s+/g, ' ').substring(0, 200);
+                // Score: line containing "/" and digits (e.g. "245/6 (20 ov)")
+                const scoreLine = lines.find(l => /\\d+\\/\\d+/.test(l) || /\\d+\\s*\\(\\d+/.test(l));
+                if (scoreLine) data.score = scoreLine;
 
-                // ── Helper: extract team rows from a section ───────────────
-                const extractTeamRows = (section) => {
-                    const teams = {};
-                    if (!section) return teams;
-                    section.querySelectorAll('tr').forEach(row => {
-                        const cells = [...row.querySelectorAll('td')];
-                        if (cells.length < 3) return;
-                        const name = cells[0]?.innerText?.trim();
-                        if (!name || name.length < 2 || name.length > 40) return;
-                        // Back cols (blue): 1,2,3 → take best (middle one)
-                        const allVals = cells.slice(1).map(c => pf(c.innerText));
-                        const backs = allVals.slice(0, 3).filter(v => v && v > 1 && v < 500);
-                        const lays  = allVals.slice(3, 6).filter(v => v && v > 1 && v < 500);
-                        if (backs.length) {
-                            teams[name] = {
-                                back: backs[Math.floor(backs.length/2)],
-                                lay: lays.length ? lays[Math.floor(lays.length/2)] : null
+                // ── MATCH ODDS + BOOKMAKER via body text parsing ──────────
+                // Page body text has predictable structure for each market:
+                //   [Market Header]
+                //   ... (Cashout, Loss Cut, BACK, LAY) ...
+                //   Team Name
+                //   odds_back1 / vol1K / odds_back2 / vol2K / odds_back3 / vol3K
+                //   odds_lay1  / vol1K / odds_lay2  / vol2K / odds_lay3  / vol3K
+                //   Team Name 2 ...
+                // Volumes (>500) vs odds (1.01-499) allow easy separation.
+
+                const allBodyLines = document.body.innerText
+                    .split('\\n').map(s => s.trim()).filter(Boolean);
+
+                const isOddsVal = v => v !== null && v > 1.0 && v < 500;
+                const isTeamLine = s => (
+                    s.length >= 4 && s.length <= 55 &&
+                    !/^[\\d.\\-]+$/.test(s) &&
+                    !/^\\d+[KMBkmb]/.test(s) &&
+                    !/^(BACK|LAY|Cashout|Loss|MIN|MAX|WHO|TOSS|Genie|BOOKM|\\(MIN|i$)/i.test(s) &&
+                    !s.startsWith('(')
+                );
+
+                const parseMarketOdds = (headerRx, stopRx) => {
+                    const result = {};
+                    const hIdx = allBodyLines.findIndex(l => headerRx.test(l));
+                    if (hIdx === -1) return result;
+                    // Find 'LAY' line after header (market BACK/LAY header)
+                    let layIdx = -1;
+                    for (let i = hIdx + 1; i < Math.min(hIdx + 15, allBodyLines.length); i++) {
+                        if (allBodyLines[i] === 'LAY') { layIdx = i; break; }
+                    }
+                    if (layIdx === -1) return result;
+                    let idx = layIdx + 1;
+                    while (idx < allBodyLines.length) {
+                        const line = allBodyLines[idx];
+                        if (stopRx && stopRx.test(line)) break;
+                        if (!isTeamLine(line)) { idx++; continue; }
+                        // Collect odds values after team name (skip volumes >500)
+                        const oddsVals = [];
+                        let j = idx + 1;
+                        while (j < Math.min(idx + 30, allBodyLines.length) && oddsVals.length < 6) {
+                            const l2 = allBodyLines[j];
+                            if (isTeamLine(l2) && l2 !== line) break;
+                            if (stopRx && stopRx.test(l2)) break;
+                            const v = pf(l2);
+                            if (isOddsVal(v)) oddsVals.push(v);
+                            j++;
+                        }
+                        if (oddsVals.length >= 2) {
+                            const half = Math.ceil(oddsVals.length / 2);
+                            const backs = oddsVals.slice(0, half);
+                            const lays  = oddsVals.slice(half);
+                            result[line] = {
+                                back: backs.length ? Math.max(...backs) : null,
+                                lay:  lays.length  ? Math.min(...lays)  : null
                             };
                         }
-                    });
-                    return teams;
+                        idx = j;
+                    }
+                    return result;
                 };
 
-                // ── Match Odds section ─────────────────────────────────────
-                // Try by heading text
-                const allTextEls = [...document.querySelectorAll('div, h3, h4, span')];
-                const moHeading = allTextEls.find(el =>
-                    /^Match Odds$/i.test(el.innerText?.trim()) ||
-                    /^Match Winner$/i.test(el.innerText?.trim())
+                data.match_odds = parseMarketOdds(
+                    /^Match Odds$/i,
+                    /^BOOKMAKER$|^TOSS$|^WHO WILL|^Genie/i
                 );
-                let moSection = moHeading?.closest('table') ||
-                                moHeading?.parentElement?.querySelector('table') ||
-                                moHeading?.closest('[class]')?.querySelector('table');
-
-                // Fallback: find by class
-                if (!moSection) {
-                    moSection = document.querySelector(
-                        '[class*="match-odds" i] table, [class*="matchOdds"] table, ' +
-                        '[class*="match_odds"] table'
-                    );
-                }
-                if (moSection) {
-                    data.match_odds = extractTeamRows(moSection.closest('table') || moSection);
-                }
-
-                // ── Bookmaker section ──────────────────────────────────────
-                const bmHeading = allTextEls.find(el =>
-                    /^BOOKMAKER$/i.test(el.innerText?.trim()) ||
-                    /^Bookmaker Market$/i.test(el.innerText?.trim())
+                data.bookmaker = parseMarketOdds(
+                    /^BOOKMAKER$/i,
+                    /^TOSS$|^WHO WILL|^Genie|^Sessions|^Fancy/i
                 );
-                let bmSection = bmHeading?.closest('table') ||
-                                bmHeading?.parentElement?.querySelector('table') ||
-                                bmHeading?.closest('[class]')?.querySelector('table');
-                if (!bmSection) {
-                    bmSection = document.querySelector('[class*="bookmaker" i] table');
-                }
-                if (bmSection) {
-                    const bm = extractTeamRows(bmSection.closest('table') || bmSection);
-                    // Bookmaker odds are integers (run differences)
-                    data.bookmaker = bm;
-                }
 
-                // ── Sessions / Fancy ───────────────────────────────────────
-                const sessionKeywords = /Over Runs|Session|Adv|Fancy|Wicket|Runs/i;
-                const premiumKeywords = /Premium|Player Runs|Partnership|Boundaries/i;
+                // ── SESSIONS via innerText of the body (one authoritative source) ──
+                // Use document.body.innerText directly (not a div's innerText which duplicates)
+                // Session labels must contain known fancy-bet keywords (not nav tabs or headers)
+                const sessionKW = /Over Runs|Adv|Fancy|Wicket|1st Wkt|Odd Even|Fall Of Wkt|Run Rate|Total Match/i;
+                const premiumKW = /Player Runs|Partnership|Boundaries|Player Wickets/i;
+                const skipLabels = /^(Sessions|Fancy Market|Premium Market|All|Odd\/Even|W\/P Market|Extra Market|Min Bet|Max Bet|BACK|LAY|Meter|Khado|i|Top Matches|Sports|Cricket|HOME|CASINO)$/i;
 
-                [...document.querySelectorAll('tr')].forEach(row => {
-                    const cells = [...row.querySelectorAll('td')];
-                    if (cells.length < 3) return;
+                const bodyLines = document.body.innerText
+                    .split('\\n').map(s => s.trim()).filter(Boolean);
 
-                    const label = cells[0]?.innerText?.trim();
-                    if (!label || label.length < 4 || label.length > 80) return;
+                const seenLabels = new Set();
+                for (let i = 0; i < bodyLines.length - 1; i++) {
+                    const label = bodyLines[i];
+                    if (label.length < 5 || label.length > 80) continue;
+                    if (skipLabels.test(label)) continue;
+                    if (!sessionKW.test(label) && !premiumKW.test(label)) continue;
+                    if (seenLabels.has(label)) { i++; continue; }  // skip duplicates early
 
-                    if (!sessionKeywords.test(label) && !premiumKeywords.test(label)) return;
+                    // Collect consecutive numeric lines after label
+                    const nums = [];
+                    let j = i + 1;
+                    while (j < Math.min(i + 7, bodyLines.length)) {
+                        const line = bodyLines[j];
+                        // Stop if it's clearly a new label or non-numeric
+                        if (line.length > 20 && !/^\\d/.test(line)) break;
+                        if (/^Min Bet|^Max Bet/i.test(line)) { j++; continue; }
+                        const v = pf(line);
+                        if (v !== null && v > 0 && v < 100000) nums.push(v);
+                        j++;
+                    }
+                    if (nums.length < 2) continue;
+                    seenLabels.add(label);
 
-                    // Session layout: | Label | NO_ODDS | NO_LINE | YES_LINE | YES_ODDS | Status? |
-                    // Or simpler:     | Label | NO | YES |
-                    const vals = cells.slice(1).map(c => pf(c.innerText));
-
-                    let no_line = null, yes_line = null, no_odds = null, yes_odds = null;
-
-                    if (vals.length >= 4) {
-                        // Typical: no_odds, no_line, yes_line, yes_odds
-                        no_odds  = vals[0];
-                        no_line  = vals[1];
-                        yes_line = vals[2];
-                        yes_odds = vals[3];
-                    } else if (vals.length >= 2) {
-                        no_line  = vals[0];
-                        yes_line = vals[1];
+                    // Format: [no_line, no_odds, yes_line, yes_odds] or [no_line, yes_line]
+                    let no_line, yes_line, no_odds = null, yes_odds = null;
+                    if (nums.length >= 4) {
+                        [no_line, no_odds, yes_line, yes_odds] = nums;
+                    } else {
+                        [no_line, yes_line] = nums;
                     }
 
                     const entry = { label, no: no_line, yes: yes_line, no_odds, yes_odds };
-
-                    if (premiumKeywords.test(label)) {
+                    if (premiumKW.test(label)) {
                         data.premium_sessions.push(entry);
                     } else {
                         data.sessions.push(entry);
                     }
-                });
+                    i = j - 1;  // advance past consumed lines
+                }
 
                 return data;
             }""")
