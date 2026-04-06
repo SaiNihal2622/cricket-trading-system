@@ -30,6 +30,9 @@ server {{
     location /health {{
         proxy_pass http://127.0.0.1:8000;
     }}
+    location /status {{
+        proxy_pass http://127.0.0.1:8000;
+    }}
     location / {{
         try_files \$uri /index.html;
     }}

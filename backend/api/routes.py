@@ -437,6 +437,63 @@ async def get_session_analysis(request: Request, match_id: int = 1):
 
 # ─── Live Match Data ───────────────────────────────────────────────────────────
 
+@router.get("/agent/status")
+async def api_agent_status(request: Request):
+    """Full agent status: positions, risk, bankroll, actions"""
+    agent = getattr(request.app.state, "trading_agent", None)
+    if not agent:
+        return {"state": "disabled"}
+    return agent.get_status()
+
+
+@router.get("/agent/actions")
+async def api_agent_actions(request: Request, limit: int = 50):
+    """Recent agent trade log"""
+    agent = getattr(request.app.state, "trading_agent", None)
+    if not agent:
+        return {"actions": []}
+    return {"actions": agent.get_action_log(limit)}
+
+
+@router.post("/agent/start")
+async def api_agent_start(request: Request):
+    agent = getattr(request.app.state, "trading_agent", None)
+    if not agent:
+        raise HTTPException(404, "Agent not initialized")
+    await agent.start()
+    return {"status": "started", "state": agent.state.value}
+
+
+@router.post("/agent/pause")
+async def api_agent_pause(request: Request):
+    agent = getattr(request.app.state, "trading_agent", None)
+    if not agent:
+        raise HTTPException(404, "Agent not initialized")
+    await agent.pause()
+    return {"status": "paused", "state": agent.state.value}
+
+
+@router.post("/agent/resume")
+async def api_agent_resume(request: Request):
+    agent = getattr(request.app.state, "trading_agent", None)
+    if not agent:
+        raise HTTPException(404, "Agent not initialized")
+    await agent.resume()
+    return {"status": "resumed", "state": agent.state.value}
+
+
+@router.post("/agent/circuit-breaker/reset")
+async def api_agent_reset_circuit_breaker(request: Request):
+    agent = getattr(request.app.state, "trading_agent", None)
+    if not agent:
+        raise HTTPException(404, "Agent not initialized")
+    agent.risk_manager.reset_circuit_breaker()
+    from agent.trading_agent import AgentState
+    if agent.state == AgentState.CIRCUIT_BREAK:
+        agent.state = AgentState.RUNNING
+    return {"status": "reset"}
+
+
 @router.get("/matches/live-ipl")
 async def get_live_ipl_matches():
     """Fetch live IPL matches from Cricbuzz"""
