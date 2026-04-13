@@ -135,6 +135,7 @@ Respond ONLY in this exact JSON (no markdown):
         decision_engine_output: dict,
         position: Optional[dict] = None,
         telegram_signals: list = None,
+        historical=None,   # HistoricalDataEngine instance
     ) -> dict:
         """
         Analyze situation and return a structured trading recommendation.
@@ -164,7 +165,7 @@ Respond ONLY in this exact JSON (no markdown):
 
         prompt = self._build_prompt(
             match_state, odds, ml_prediction,
-            decision_engine_output, position, telegram_signals
+            decision_engine_output, position, telegram_signals, historical
         )
 
         try:
@@ -188,7 +189,7 @@ Respond ONLY in this exact JSON (no markdown):
             logger.error(f"Gemini error: {e}")
             return self._fallback_reasoning(decision_engine_output)
 
-    def _build_prompt(self, state, odds, ml, decision, position, telegram) -> str:
+    def _build_prompt(self, state, odds, ml, decision, position, telegram, historical=None) -> str:
         overs   = float(state.get("overs", 0))
         runs    = int(state.get("total_runs", 0))
         wickets = int(state.get("total_wickets", 0))
@@ -226,6 +227,50 @@ Respond ONLY in this exact JSON (no markdown):
             f"Win Prob (batting team): {ml.get('win_probability',0.5):.1%}\n"
             f"Momentum: {ml.get('momentum_score',0.5):.1%} | Confidence: {ml.get('confidence',0.5):.1%}"
         )
+
+        # ── Historical data context (17 years IPL) ────────────────────────
+        if historical:
+            try:
+                venue   = state.get("venue", "")
+                team_a  = state.get("team_a", "")
+                team_b  = state.get("team_b", "")
+                vs      = historical.get_venue_stats(venue) if venue else {}
+                h2h     = historical.get_h2h_win_pct(team_a, team_b) if (team_a and team_b) else 50
+                ra      = historical.get_team_rating(team_a) if team_a else {}
+                rb      = historical.get_team_rating(team_b) if team_b else {}
+
+                hist_lines = []
+                if vs:
+                    hist_lines.append(
+                        f"Venue ({venue}): avg 1st innings={vs.get('avg_1st_innings',167)}, "
+                        f"chase win%={vs.get('chase_win_pct',50)}, "
+                        f"powerplay avg={vs.get('avg_powerplay',52)}, "
+                        f"death avg={vs.get('avg_death',59)}, "
+                        f"pitch={vs.get('pitch','balanced')}, dew={vs.get('dew_factor','medium')}"
+                    )
+                if team_a and team_b:
+                    hist_lines.append(
+                        f"H2H ({team_a} vs {team_b}): {team_a} wins {h2h:.0f}% historically"
+                    )
+                if ra:
+                    hist_lines.append(
+                        f"Team strength: {team_a} overall={ra.get('overall',7)}/10 "
+                        f"(bat={ra.get('batting_depth',7)}, bowl={ra.get('bowling_attack',7)}) | "
+                        f"{team_b} overall={rb.get('overall',7)}/10"
+                    )
+                # Batsman profiles
+                bat1 = state.get("batsman_1", {})
+                if bat1 and bat1.get("name"):
+                    bp = historical.get_batsman_profile(bat1["name"])
+                    hist_lines.append(
+                        f"Batsman on strike: {bat1['name']} — SR={bp.get('sr',120)}, "
+                        f"avg={bp.get('avg',22)}, class={bp.get('class','C')}"
+                    )
+
+                if hist_lines:
+                    parts.append("=== 17-YEAR IPL HISTORICAL DATA ===\n" + "\n".join(hist_lines))
+            except Exception:
+                pass
 
         parts.append(
             f"=== RULE ENGINE ===\n"

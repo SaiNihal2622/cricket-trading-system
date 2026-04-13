@@ -496,16 +496,22 @@ class TradingAgent:
         if self.ai_reasoner.is_available and (is_borderline or is_conflicting or is_critical):
             try:
                 ai_result = await self.ai_reasoner.reason(
-                    match_state       = state,
-                    odds              = {"team_a_odds": odds_a, "team_b_odds": odds_b},
-                    ml_prediction     = {
-                        "win_probability": ml_pred.win_probability,
-                        "momentum_score":  ml_pred.momentum_score,
-                        "model_version":   ml_pred.model_version,
+                    match_state            = state,
+                    odds                   = {
+                        "team_a_odds": odds_a,
+                        "team_b_odds": odds_b,
+                        "bookmaker":   data.get("bookmaker", {}),
+                    },
+                    ml_prediction          = {
+                        "win_probability":  ml_pred.win_probability,
+                        "momentum_score":   ml_pred.momentum_score,
+                        "model_version":    ml_pred.model_version,
+                        "confidence":       ml_pred.confidence,
                     },
                     decision_engine_output = decision.to_dict(),
-                    position          = position.to_dict() if position else None,
-                    telegram_signals  = telegram_signals,
+                    position               = position.to_dict() if position else None,
+                    telegram_signals       = telegram_signals,
+                    historical             = self.historical_db,   # 17-year IPL data
                 )
                 ai_action = ai_result.get("action", "HOLD")
                 ai_conf   = ai_result.get("confidence", 0)
