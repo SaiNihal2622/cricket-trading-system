@@ -6,6 +6,8 @@ Used by the decision engine to make probability-adjusted bets.
 
 Sources: cricsheet.org, ESPNcricinfo public stats, IPL official records
 """
+import logging
+logger = logging.getLogger(__name__)
 
 # ── Venue Intelligence ─────────────────────────────────────────────────────────
 # avg_1st_innings: average 1st innings score at this venue
@@ -182,11 +184,47 @@ SITUATION_WIN_PCT = {
 class HistoricalDataEngine:
     """
     Provides historical intelligence to the trading agent.
-    All lookups are O(1) from pre-built dictionaries.
+    Tries PostgreSQL (real 18-year IPL data) first, falls back to hardcoded dicts.
     """
 
+    def __init__(self):
+        self._db = None  # set by init_db() at startup
+
+    async def init_db(self):
+        """Call once at app startup to wire up the PostgreSQL backend."""
+        try:
+            from data_ingestion.ipl_db import get_ipl_db
+            self._db = await get_ipl_db()
+            if self._db and await self._db.is_populated():
+                logger.info("HistoricalDataEngine: PostgreSQL IPL data active")
+            else:
+                logger.info("HistoricalDataEngine: DB empty or unavailable — using hardcoded tables")
+                self._db = None
+        except Exception as e:
+            logger.warning(f"HistoricalDataEngine DB init failed: {e}")
+            self._db = None
+
+    def _run_async(self, coro):
+        """Run async DB query synchronously (called from sync context)."""
+        import asyncio
+        try:
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                import concurrent.futures
+                with concurrent.futures.ThreadPoolExecutor() as pool:
+                    fut = pool.submit(asyncio.run, coro)
+                    return fut.result(timeout=0.5)
+            else:
+                return loop.run_until_complete(coro)
+        except Exception:
+            return None
+
     def get_venue_stats(self, venue: str) -> dict:
-        """Get stats for a venue by partial name match."""
+        """Get stats for a venue — DB first, hardcoded fallback."""
+        if self._db:
+            result = self._run_async(self._db.venue_stats(venue))
+            if result:
+                return result
         venue_lower = venue.lower().strip()
         for key, stats in VENUE_STATS.items():
             if key in venue_lower or venue_lower in key or any(
@@ -196,15 +234,17 @@ class HistoricalDataEngine:
         return VENUE_STATS["default"]
 
     def get_h2h_win_pct(self, team_a: str, team_b: str) -> float:
-        """Get team_a's historical win % vs team_b. Returns 50.0 if unknown."""
+        """Get team_a's historical win % vs team_b — DB first, hardcoded fallback."""
+        if self._db:
+            result = self._run_async(self._db.h2h(team_a, team_b))
+            if result is not None:
+                return result
         a = team_a.lower().strip()
         b = team_b.lower().strip()
-        # Try direct lookup
         if (a, b) in H2H_WIN_PCT:
             return H2H_WIN_PCT[(a, b)]
         if (b, a) in H2H_WIN_PCT:
             return 100 - H2H_WIN_PCT[(b, a)]
-        # Try partial matches
         for (ta, tb), pct in H2H_WIN_PCT.items():
             if (ta in a or a in ta) and (tb in b or b in tb):
                 return pct
@@ -213,18 +253,21 @@ class HistoricalDataEngine:
         return 50.0
 
     def get_batsman_profile(self, name: str) -> dict:
-        """Get batsman stats. Returns default profile if unknown."""
+        """Get batsman stats — DB first, hardcoded fallback."""
+        if self._db:
+            result = self._run_async(self._db.batsman(name))
+            if result:
+                return result
         name_lower = name.lower().strip()
         if name_lower in BATSMAN_PROFILES:
             return BATSMAN_PROFILES[name_lower]
-        # Partial match (last name)
         for key, profile in BATSMAN_PROFILES.items():
             if name_lower in key or key.split()[-1] == name_lower.split()[-1]:
                 return profile
         return BATSMAN_PROFILES["default"]
 
     def get_team_rating(self, team: str) -> dict:
-        """Get team strength rating."""
+        """Get team strength rating (hardcoded — rarely changes season to season)."""
         team_lower = team.lower().strip()
         if team_lower in TEAM_RATINGS:
             return TEAM_RATINGS[team_lower]
@@ -237,24 +280,20 @@ class HistoricalDataEngine:
         self, overs: float, wickets: int, innings: int,
         crr: float = 0, rrr: float = 0
     ) -> float:
-        """
-        Get base win probability from match situation.
-        Adjusts for RRR vs CRR differential in 2nd innings.
-        """
+        """Get base win probability — DB first (real stats), hardcoded fallback."""
+        if self._db:
+            result = self._run_async(self._db.situation_win_pct(overs, wickets, innings, crr, rrr))
+            if result is not None:
+                return result
         over_bucket = min(20, max(6, int(overs // 5) * 5 + (5 if overs % 5 >= 2.5 else 0)))
         wkt_bucket  = min(5, wickets)
         inn         = min(2, max(1, innings))
-
-        key = (over_bucket, wkt_bucket, inn)
+        key  = (over_bucket, wkt_bucket, inn)
         base = SITUATION_WIN_PCT.get(key, 50)
-
-        # Adjust for 2nd innings RRR vs CRR (crucial)
         if inn == 2 and rrr > 0 and crr > 0:
             rr_edge = (crr - rrr) / max(rrr, 1)
-            # Each 10% edge in CRR vs RRR = ±5% win probability
             base += rr_edge * 50
             base = max(5, min(95, base))
-
         return base
 
     def compute_pre_match_probability(
@@ -330,5 +369,5 @@ class HistoricalDataEngine:
         }
 
 
-# Singleton
+# Singleton — init_db() called at app startup to wire up PostgreSQL
 historical_db = HistoricalDataEngine()

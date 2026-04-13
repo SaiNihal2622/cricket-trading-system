@@ -44,6 +44,13 @@ async def lifespan(app: FastAPI):
     await init_redis()
     logger.info("✅ Database connections established")
 
+    # ── Init IPL historical data from PostgreSQL ──────────────────────────────
+    try:
+        from data_ingestion.historical_data import historical_db
+        await historical_db.init_db()
+    except Exception as e:
+        logger.warning(f"IPL DB init skipped: {e}")
+
     # Start live feed manager
     live_feed_manager = LiveFeedManager()
     asyncio.create_task(live_feed_manager.start())
