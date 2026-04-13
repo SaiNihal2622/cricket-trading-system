@@ -46,10 +46,11 @@ class RoyalBookExchange:
                       '[class*="place-bet" i] button', '[class*="placeBet"] button',
                       'button:has-text("Submit")']
 
-    def __init__(self, username: str, password: str, headless: bool = True):
+    def __init__(self, username: str, password: str, headless: bool = True, demo_only: bool = True):
         self.username   = username
         self.password   = password
         self.headless   = headless
+        self.demo_only  = demo_only   # True = demo login only (safe, no real bets)
 
         self._pw       = None
         self._browser: Optional[Browser]        = None
@@ -161,18 +162,26 @@ class RoyalBookExchange:
     # ── Auth ─────────────────────────────────────────────────────────────────
 
     async def _login(self):
-        """Login flow — tries DEMO first (for odds scraping), credentials as fallback."""
+        """Login flow — DEMO only if demo_only=True, otherwise tries credentials too."""
         p = self._page
         self._login_attempts += 1
-        logger.info(f"RoyalBook login attempt #{self._login_attempts}")
+        logger.info(f"RoyalBook login attempt #{self._login_attempts} | demo_only={self.demo_only}")
 
         try:
             await p.goto(self.LOGIN_URL, wait_until="domcontentloaded", timeout=35000)
             await p.wait_for_timeout(3000)  # let React fully render
 
-            # ── Try DEMO login first (fastest, no credentials needed) ──────
+            # ── Demo login (always tried first) ──────────────────────────
             demo_success = await self._try_demo_login_inline()
             if demo_success:
+                return
+
+            # ── If demo_only=True, stop here — never use real credentials ─
+            if self.demo_only:
+                logger.warning(
+                    "RoyalBook: demo login failed and ROYALBOOK_DEMO_ONLY=true — "
+                    "not attempting credential login. Odds scraping will be unavailable."
+                )
                 return
 
             current_url = p.url
@@ -369,8 +378,8 @@ class RoyalBookExchange:
                 f"→ {final_url}"
             )
 
-            # If credential login failed, fall back to Demo login
-            if not self._logged_in:
+            # If credential login failed, fall back to Demo login (only if not demo_only — already tried above)
+            if not self._logged_in and not self.demo_only:
                 await self._try_demo_login()
 
             # Screenshot debug on failure

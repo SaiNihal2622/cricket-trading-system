@@ -49,6 +49,8 @@ class Settings(BaseSettings):
     MOMENTUM_THRESHOLD: float = 0.70        # 70% momentum for strong signal
     MIN_STAKE: float = 100.0
     MAX_STAKE: float = 10000.0
+    MIN_SIGNAL_CONFIDENCE: float = 0.70    # Only send Telegram for 70%+ confidence signals
+    ML_ENABLED: bool = False               # False = use heuristic only (no XGBoost needed)
 
     # ── Autonomous Agent ────────────────────────────────────────────────────
     AGENT_ENABLED: bool = False             # Master switch
@@ -79,6 +81,7 @@ class Settings(BaseSettings):
     ROYALBOOK_PASSWORD: str = ""
     ROYALBOOK_HEADLESS: bool = True
     ROYALBOOK_AUTO_NAVIGATE: bool = True
+    ROYALBOOK_DEMO_ONLY: bool = True      # True = demo login only, never use real credentials
 
     # CricAPI (optional — for richer live data)
     CRICAPI_KEY: str = ""

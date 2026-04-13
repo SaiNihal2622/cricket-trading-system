@@ -168,42 +168,40 @@ class FeatureEngineering:
 
 class CricketMLModel:
     """
-    XGBoost win probability model.
-    Falls back to statistical heuristic when model file not found.
+    Win probability model — uses statistical heuristic (no XGBoost dependency).
+
+    The heuristic uses:
+    - IPL 17-year averages (venue stats, phase averages, H2H records)
+    - Run rate vs required run rate differential
+    - Wickets fallen + phase (powerplay/middle/death)
+    - DLS-style resource calculation for 2nd innings
+
+    Gemini AI is the primary decision engine; this provides the numeric
+    win_probability input that feeds into the decision engine and Gemini prompt.
     """
 
-    def __init__(self, model_path: str = "", scaler_path: str = ""):
-        self.model = None
-        self.scaler = None
-        self.feature_eng = FeatureEngineering()
+    def __init__(self, model_path: str = "", scaler_path: str = "", ml_enabled: bool = False):
+        self.feature_eng   = FeatureEngineering()
         self._model_loaded = False
-
-        if model_path and os.path.exists(model_path):
-            self._load_model(model_path, scaler_path)
-
-    def _load_model(self, model_path: str, scaler_path: str):
-        try:
-            with open(model_path, "rb") as f:
-                self.model = pickle.load(f)
-            if scaler_path and os.path.exists(scaler_path):
-                with open(scaler_path, "rb") as f:
-                    self.scaler = pickle.load(f)
-            self._model_loaded = True
-            logger.info(f"XGBoost model loaded from {model_path}")
-        except Exception as e:
-            logger.warning(f"Could not load ML model: {e}. Using heuristic fallback.")
+        # ml_enabled=False means always use heuristic (no XGBoost needed)
+        if ml_enabled and model_path and os.path.exists(model_path):
+            try:
+                with open(model_path, "rb") as f:
+                    self.model = pickle.load(f)
+                self._model_loaded = True
+                logger.info(f"XGBoost model loaded: {model_path}")
+            except Exception as e:
+                logger.warning(f"XGBoost load failed: {e} — using heuristic")
+                self.model = None
+        else:
+            self.model  = None
+            self.scaler = None
+            logger.info("CricketMLModel: heuristic mode (ML_ENABLED=false)")
 
     def predict(self, match_state: dict) -> MLPrediction:
-        """
-        Predict win probability and momentum score.
-        Uses XGBoost if loaded, otherwise heuristic model.
-        """
+        """Predict win probability + momentum using IPL heuristic."""
         features = self.feature_eng.extract(match_state)
-
-        if self._model_loaded and self.model is not None:
-            return self._xgb_predict(features, match_state)
-        else:
-            return self._heuristic_predict(match_state, features)
+        return self._heuristic_predict(match_state, features)
 
     def _xgb_predict(self, features: np.ndarray, state: dict) -> MLPrediction:
         """XGBoost prediction"""

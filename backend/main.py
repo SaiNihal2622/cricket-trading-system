@@ -60,6 +60,7 @@ async def lifespan(app: FastAPI):
             settings.ROYALBOOK_USERNAME,
             settings.ROYALBOOK_PASSWORD,
             headless=settings.ROYALBOOK_HEADLESS,
+            demo_only=getattr(settings, "ROYALBOOK_DEMO_ONLY", True),
         )
         await rb_instance.start()
         odds_scraper.attach_royalbook(rb_instance)

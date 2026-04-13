@@ -77,7 +77,9 @@ class TradingAgent:
         self.session_analyzer  = SessionAnalyzer()
         self.value_strategy    = ValueStrategyEngine()
         self.historical_db     = HistoricalDataEngine()
-        self.ml_model          = CricketMLModel()
+        self.ml_model          = CricketMLModel(
+            ml_enabled = getattr(self.settings, 'ML_ENABLED', False),
+        )
         self.ai_reasoner      = AIReasoner(
             api_key = getattr(self.settings, 'GEMINI_API_KEY', '') or getattr(self.settings, 'GROQ_API_KEY', ''),
             model   = getattr(self.settings, 'GEMINI_MODEL', 'gemini-2.0-flash'),
@@ -717,8 +719,27 @@ class TradingAgent:
         Route a trade proposal:
         - Autopilot: execute immediately
         - Semi-auto: publish for user approval, wait 30s
-        Always fires a Telegram signal so the user can place manually.
+        Only fires Telegram if confidence >= MIN_SIGNAL_CONFIDENCE (default 0.70).
         """
+        confidence = float(proposal.get("confidence", 0))
+        min_conf   = getattr(self.settings, "MIN_SIGNAL_CONFIDENCE", 0.70)
+
+        # ── 70%+ confidence gate ─────────────────────────────────────────────
+        if confidence < min_conf:
+            self._log_action("SIGNAL_FILTERED", {
+                "type":       proposal.get("type"),
+                "confidence": f"{confidence:.0%}",
+                "threshold":  f"{min_conf:.0%}",
+                "reason":     f"confidence {confidence:.0%} below threshold {min_conf:.0%} — not sending",
+            })
+            logger.debug(
+                f"Signal filtered: {proposal.get('type')} confidence={confidence:.0%} < {min_conf:.0%}"
+            )
+            # Still execute in autopilot if agent is live, but NO Telegram noise
+            if self._autopilot:
+                await executor(proposal)
+            return
+
         # ── Fire Telegram notification immediately (zero delay, awaited) ────────
         try:
             from telegram_bot.notifier import send_bet_call, send_bookset_call, send_session_call
