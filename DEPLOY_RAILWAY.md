@@ -30,7 +30,7 @@ git push -u origin claude/wonderful-beaver
 Go to your service → **Variables** tab → add these one by one:
 
 ```
-GEMINI_API_KEY=AIzaSyCSSovMtJMry0_7yjhTdxt_-qXBSrKHWvU
+GEMINI_API_KEY=your_google_cloud_gemini_key_here
 GEMINI_MODEL=gemini-2.0-flash
 
 TELEGRAM_ENABLED=true
