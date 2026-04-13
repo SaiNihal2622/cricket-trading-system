@@ -26,10 +26,11 @@ class Settings(BaseSettings):
     TELEGRAM_ENABLED: bool = False
     TELEGRAM_API_ID: str = ""
     TELEGRAM_API_HASH: str = ""
-    TELEGRAM_BOT_TOKEN: str = ""
+    TELEGRAM_BOT_TOKEN: str = ""      # BotFather token — primary sender
+    TELEGRAM_BOT_CHAT_ID: str = ""    # Your personal chat_id (send /start to bot, check getUpdates)
     TELEGRAM_CHANNELS: List[str] = []
-    TELEGRAM_ALERT_CHAT_ID: str = ""
-    TELEGRAM_SESSION: str = ""   # StringSession string for Railway (no TTY)
+    TELEGRAM_ALERT_CHAT_ID: str = ""  # Alias for BOT_CHAT_ID (backward compat)
+    TELEGRAM_SESSION: str = ""        # StringSession — fallback if no BOT_TOKEN
     TELEGRAM_PHONE: str = ""
 
     # Cricket API
