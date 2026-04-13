@@ -82,7 +82,11 @@ class Settings(BaseSettings):
     # CricAPI (optional — for richer live data)
     CRICAPI_KEY: str = ""
 
-    # AI Reasoner (Groq)
+    # AI Reasoner (Gemini — primary)
+    GEMINI_API_KEY: str = ""
+    GEMINI_MODEL: str = "gemini-2.0-flash"
+
+    # AI Reasoner (Groq — fallback, kept for backward compat)
     GROQ_API_KEY: str = ""
     GROQ_MODEL: str = "llama-3.3-70b-versatile"
 

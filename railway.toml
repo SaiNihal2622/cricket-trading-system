@@ -4,7 +4,37 @@ dockerfilePath = "Dockerfile"
 
 [deploy]
 restartPolicyType = "on_failure"
-restartPolicyMaxRetries = 5
+restartPolicyMaxRetries = 10
 healthcheckPath = "/health"
-healthcheckTimeout = 120
+healthcheckTimeout = 180
 region = "ap-southeast"
+
+# Railway injects: DATABASE_URL, REDIS_URL, PORT automatically
+# Set these env vars in Railway dashboard:
+#
+# Required:
+#   TELEGRAM_ENABLED=true
+#   TELEGRAM_API_ID=<your_api_id>
+#   TELEGRAM_API_HASH=<your_api_hash>
+#   TELEGRAM_SESSION=<StringSession from tg_step2_login.py>
+#   TELEGRAM_PHONE=<+91xxxxxxxxxx>
+#   GEMINI_API_KEY=<from https://aistudio.google.com/app/apikey>
+#
+# RoyalBook (for live odds):
+#   EXCHANGE_TYPE=royalbook
+#   ROYALBOOK_USERNAME=<your_username>
+#   ROYALBOOK_PASSWORD=<your_password>
+#   ROYALBOOK_HEADLESS=true
+#   ROYALBOOK_AUTO_NAVIGATE=true
+#
+# Agent:
+#   AGENT_ENABLED=true
+#   AGENT_MODE=simulation       (change to "live" only after testing)
+#   AGENT_AUTOPILOT=false       (false = signals only, no auto-bet)
+#   INITIAL_BANKROLL=10000
+#   MAX_STAKE_PER_TRADE=1000
+#   STOP_LOSS_PCT=20
+#
+# Optional:
+#   CRICKET_API_KEY=<cricapi.com key>
+#   WEATHER_API_KEY=<openweathermap key>

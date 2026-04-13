@@ -79,8 +79,8 @@ class TradingAgent:
         self.historical_db     = HistoricalDataEngine()
         self.ml_model          = CricketMLModel()
         self.ai_reasoner      = AIReasoner(
-            api_key = getattr(self.settings, 'GROQ_API_KEY', ''),
-            model   = getattr(self.settings, 'GROQ_MODEL', 'llama-3.3-70b-versatile'),
+            api_key = getattr(self.settings, 'GEMINI_API_KEY', '') or getattr(self.settings, 'GROQ_API_KEY', ''),
+            model   = getattr(self.settings, 'GEMINI_MODEL', 'gemini-2.0-flash'),
         )
 
         # Mode
@@ -219,12 +219,14 @@ class TradingAgent:
                     try:
                         from telegram_bot.notifier import send_anti_panic
                         s = match_data["state"]
-                        asyncio.create_task(send_anti_panic(
-                            "HOLD", position.backed_team,
-                            float(s.get("overs",0)),
-                            f"{s.get('total_runs',0)}/{s.get('total_wickets',0)}",
-                            f"{s.get('team_a','?')} vs {s.get('team_b','?')}",
-                        ))
+                        await send_anti_panic(
+                            signal    = "HOLD",
+                            team      = position.backed_team,
+                            overs     = float(s.get("overs", 0)),
+                            score     = f"{s.get('total_runs',0)}/{s.get('total_wickets',0)}",
+                            match     = f"{s.get('team_a','?')} vs {s.get('team_b','?')}",
+                            reasoning = "Wicket fell but match situation still recoverable — hold position.",
+                        )
                     except Exception:
                         pass
                 elif anti_panic == "CUT":
@@ -232,12 +234,14 @@ class TradingAgent:
                     try:
                         from telegram_bot.notifier import send_anti_panic
                         s = match_data["state"]
-                        asyncio.create_task(send_anti_panic(
-                            "CUT", position.backed_team,
-                            float(s.get("overs",0)),
-                            f"{s.get('total_runs',0)}/{s.get('total_wickets',0)}",
-                            f"{s.get('team_a','?')} vs {s.get('team_b','?')}",
-                        ))
+                        await send_anti_panic(
+                            signal    = "CUT",
+                            team      = position.backed_team,
+                            overs     = float(s.get("overs", 0)),
+                            score     = f"{s.get('total_runs',0)}/{s.get('total_wickets',0)}",
+                            match     = f"{s.get('team_a','?')} vs {s.get('team_b','?')}",
+                            reasoning = "Multiple wickets — collapse confirmed. Exit immediately.",
+                        )
                     except Exception:
                         pass
                     if decision:
@@ -353,20 +357,22 @@ class TradingAgent:
             # ── Telegram stop loss alert ──────────────────────────────
             try:
                 from telegram_bot.notifier import send_stop_loss
-                s = data["state"]
+                s          = data["state"]
                 match_name = f"{s.get('team_a','?')} vs {s.get('team_b','?')}"
-                overs = float(s.get("overs", 0))
-                score = f"{s.get('total_runs',0)}/{s.get('total_wickets',0)}"
-                if backed_team == s.get("team_a"):
-                    h_team = s.get("team_b", "")
-                else:
-                    h_team = s.get("team_a", "")
-                asyncio.create_task(send_stop_loss(
-                    team=backed_team, entry_odds=entry_odds,
-                    current_odds=current_odds, loss_pct=loss_pct,
-                    hedge_team=h_team, hedge_stake=position.total_exposure * 0.8,
-                    overs=overs, score=score, match=match_name,
-                ))
+                overs      = float(s.get("overs", 0))
+                score      = f"{s.get('total_runs',0)}/{s.get('total_wickets',0)}"
+                h_team     = s.get("team_b", "") if backed_team == s.get("team_a") else s.get("team_a", "")
+                await send_stop_loss(
+                    team         = backed_team,
+                    entry_odds   = entry_odds,
+                    current_odds = current_odds,
+                    loss_pct     = loss_pct,
+                    hedge_team   = h_team,
+                    hedge_stake  = position.total_exposure * 0.8,
+                    overs        = overs,
+                    score        = score,
+                    match        = match_name,
+                )
             except Exception:
                 pass
 
@@ -713,53 +719,59 @@ class TradingAgent:
         - Semi-auto: publish for user approval, wait 30s
         Always fires a Telegram signal so the user can place manually.
         """
-        # ── Fire Telegram notification regardless of autopilot mode ──────────
+        # ── Fire Telegram notification immediately (zero delay, awaited) ────────
         try:
             from telegram_bot.notifier import send_bet_call, send_bookset_call, send_session_call
-            state  = proposal.get("state", {})
-            ptype  = proposal.get("type", "BACK")
-            action = ptype.replace("VALUE_", "").replace("ENTRY", "BACK")
-            overs  = float(state.get("overs", 0))
-            runs   = state.get("total_runs", 0)
-            wkts   = state.get("total_wickets", 0)
-            score  = f"{runs}/{wkts}"
-            match  = f"{state.get('team_a','?')} vs {state.get('team_b','?')}"
+            state      = proposal.get("state", {})
+            ptype      = proposal.get("type", "BACK")
+            action     = ptype.replace("VALUE_", "").replace("ENTRY", "BACK")
+            overs      = float(state.get("overs", 0))
+            runs       = state.get("total_runs", 0)
+            wkts       = state.get("total_wickets", 0)
+            score      = f"{runs}/{wkts}"
+            match      = f"{state.get('team_a','?')} vs {state.get('team_b','?')}"
+            ai_source  = proposal.get("ai_source", "")
 
             if action == "PROGRESSIVE_BOOKSET":
-                asyncio.create_task(send_bookset_call(
-                    team         = proposal.get("team", ""),
-                    entry_odds   = proposal.get("odds", 0),
-                    current_odds = proposal.get("odds", 0),
-                    overs        = overs,
-                    match        = match,
-                ))
+                await send_bookset_call(
+                    team             = proposal.get("team", ""),
+                    entry_odds       = float(proposal.get("entry_odds", proposal.get("odds", 0))),
+                    current_odds     = float(proposal.get("odds", 0)),
+                    overs            = overs,
+                    match            = match,
+                    guaranteed_profit = float(proposal.get("guaranteed_profit", 0) or 0),
+                )
             elif ptype == "SESSION":
-                asyncio.create_task(send_session_call(
-                    label       = proposal.get("label", ""),
-                    side        = proposal.get("side", "YES"),
-                    stake       = float(proposal.get("stake", 0)),
-                    confidence  = float(proposal.get("confidence", 0)),
-                    reasoning   = proposal.get("reasoning", ""),
-                    overs       = overs,
-                    score       = score,
-                    match       = match,
-                ))
+                await send_session_call(
+                    label           = proposal.get("label", ""),
+                    side            = proposal.get("side", "YES"),
+                    stake           = float(proposal.get("stake", 0)),
+                    confidence      = float(proposal.get("confidence", 0)),
+                    reasoning       = proposal.get("reasoning", ""),
+                    overs           = overs,
+                    score           = score,
+                    match           = match,
+                    predicted_runs  = float(proposal.get("predicted_runs", 0) or 0),
+                    prob_over       = float(proposal.get("prob_over", 0) or 0),
+                    prob_under      = float(proposal.get("prob_under", 0) or 0),
+                )
             else:
-                asyncio.create_task(send_bet_call(
-                    action      = action,
-                    team        = proposal.get("team", ""),
-                    odds        = float(proposal.get("odds", 0)),
-                    stake       = float(proposal.get("stake", 0)),
-                    ev          = float(proposal.get("ev", 0)),
-                    confidence  = float(proposal.get("confidence", 0)),
-                    reasoning   = proposal.get("reasoning", ""),
-                    overs       = overs,
-                    score       = score,
-                    bookset_at  = float(proposal.get("bookset_at", 0) or 0),
-                    stop_loss   = float(proposal.get("stop_loss_at", 0) or 0),
-                    tier        = proposal.get("odds_tier", "mid"),
-                    match       = match,
-                ))
+                await send_bet_call(
+                    action     = action,
+                    team       = proposal.get("team", ""),
+                    odds       = float(proposal.get("odds", 0)),
+                    stake      = float(proposal.get("stake", 0)),
+                    ev         = float(proposal.get("ev", 0)),
+                    confidence = float(proposal.get("confidence", 0)),
+                    reasoning  = proposal.get("reasoning", ""),
+                    overs      = overs,
+                    score      = score,
+                    bookset_at = float(proposal.get("bookset_at", 0) or 0),
+                    stop_loss  = float(proposal.get("stop_loss_at", 0) or 0),
+                    tier       = proposal.get("odds_tier", "mid"),
+                    match      = match,
+                    ai_source  = ai_source,
+                )
         except Exception as _tg_err:
             logger.debug(f"Telegram notify error: {_tg_err}")
 
@@ -907,6 +919,17 @@ class TradingAgent:
                 "locked_pnl":   position.realized_pnl,
             })
             await self._publish_agent_action("LOSS_CUT", position.to_dict())
+            try:
+                from telegram_bot.notifier import send_loss_cut
+                await send_loss_cut(
+                    team         = position.backed_team,
+                    entry_odds   = position.entry_odds,
+                    current_odds = hedge_odds,
+                    pnl          = position.realized_pnl,
+                    match        = f"{position.team_a} vs {position.team_b}",
+                )
+            except Exception:
+                pass
 
     async def _execute_bookset(self, match_id, position, decision, odds_a, odds_b):
         bs = decision.bookset

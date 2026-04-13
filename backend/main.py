@@ -76,7 +76,13 @@ async def lifespan(app: FastAPI):
     asyncio.create_task(odds_scraper.start())
     logger.info(f"✅ Odds scraper started (source: {'royalbook_live' if rb_instance else 'mock'})")
 
-    # Start Telegram bot
+    # ── Telegram notifier — warm persistent connection ────────────────────────
+    if settings.TELEGRAM_ENABLED and settings.TELEGRAM_SESSION:
+        from telegram_bot.notifier import init_notifier
+        await init_notifier()
+        logger.info("✅ Telegram notifier ready (persistent MTProto connection)")
+
+    # Start Telegram bot (channel listener)
     if settings.TELEGRAM_ENABLED:
         telegram_bot = TelegramBot()
         asyncio.create_task(telegram_bot.start())
@@ -97,14 +103,16 @@ async def lifespan(app: FastAPI):
     # ── Startup ping on Telegram ──────────────────────────────────────────────
     try:
         from telegram_bot.notifier import send_info
-        rb_status = "✅ RoyalBook connected" if rb_instance else "⚠️ RoyalBook offline"
-        asyncio.create_task(send_info(
-            f"🏏 Bot restarted — watching for IPL matches\n"
-            f"{rb_status} | Mode: {settings.AGENT_MODE.upper()}\n"
-            f"Bankroll: ₹{getattr(settings, 'INITIAL_BANKROLL', '?')} | "
-            f"Max stake: ₹{getattr(settings, 'MAX_STAKE_PER_TRADE', '?')}\n"
-            f"Signals will arrive here. Place bets manually on RoyalBook."
-        ))
+        rb_status  = "✅ RoyalBook live" if rb_instance else "⚠️ RoyalBook offline (mock odds)"
+        ai_status  = "🧠 Gemini Flash" if settings.GEMINI_API_KEY else "⚙️ Rule engine"
+        await send_info(
+            f"🏏 Cricket Analyst restarted\n"
+            f"{rb_status} | {ai_status}\n"
+            f"Mode: {settings.AGENT_MODE.upper()} | "
+            f"Bankroll: ₹{getattr(settings, 'INITIAL_BANKROLL', '?')}\n"
+            f"Signals: ENTER, BOOKSET, LOSS_CUT, SESSION, STOP_LOSS\n"
+            f"Place bets on royalbook.win when you receive a call."
+        )
     except Exception:
         pass
 
