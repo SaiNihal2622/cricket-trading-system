@@ -196,6 +196,13 @@ class TradingAgent:
             cur_over = float(state.get("overs", 0))
             cur_over_int = int(cur_over)
 
+            # ── Skip mock/simulated data — no analysis, no Telegram signals ──
+            _src = str(state.get("source", "")) or str(state.get("match_id", ""))
+            _is_mock = "mock" in _src.lower() or _src.startswith("MOCK")
+            if _is_mock:
+                logger.debug(f"Skipping mock match {match_id} — no signals on simulated data")
+                continue
+
             # ── Instant wicket detection ──────────────────────────────────
             prev_wkts = self._prev_wickets.get(match_id, cur_wkts)
             if cur_wkts > prev_wkts:
@@ -1148,8 +1155,20 @@ class TradingAgent:
         confidence = float(proposal.get("confidence", 0))
         min_conf   = getattr(self.settings, "MIN_SIGNAL_CONFIDENCE", 0.70)
 
-        # ── Pre-match guard: never signal before ball 1 ───────────────────────
+        # ── Mock data guard: never send Telegram on simulated data ──────────────
         state = proposal.get("state", {})
+        if state.get("source", "") in ("mock", "MOCK_001", "mock_reactive") or \
+           str(state.get("match_id", "")).startswith("MOCK"):
+            logger.debug(f"Signal suppressed: mock/simulated data — no Telegram on fake data")
+            # Still execute internally in autopilot mode (for simulation P&L tracking)
+            if self._autopilot:
+                try:
+                    await executor(proposal)
+                except Exception:
+                    pass
+            return
+
+        # ── Pre-match guard: never signal before ball 1 ───────────────────────
         overs = float(state.get("overs", 0))
         if overs < 0.1 and proposal.get("type") not in ("SESSION",):
             logger.debug(f"Signal suppressed: match not started yet (overs={overs})")
