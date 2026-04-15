@@ -1196,7 +1196,10 @@ class TradingAgent:
             match      = f"{state.get('team_a','?')} vs {state.get('team_b','?')}"
             ai_source  = proposal.get("ai_source", "")
 
-            if action == "PROGRESSIVE_BOOKSET":
+            if ptype == "BOOKMAKER_EDGE":
+                # Executor (_send_bm) handles formatting — skip generic bet call
+                pass
+            elif action == "PROGRESSIVE_BOOKSET":
                 await send_bookset_call(
                     team             = proposal.get("team", ""),
                     entry_odds       = float(proposal.get("entry_odds", proposal.get("odds", 0))),
