@@ -95,9 +95,15 @@ class TradingAgent:
         # State
         self.state = AgentState.STOPPED
         self._loop_task: Optional[asyncio.Task] = None
-        self._loop_interval = getattr(self.settings, 'AGENT_LOOP_INTERVAL', 5)
+        self._loop_interval = 3  # 3s loop for fast signal delivery
         self._action_log: List[dict] = []
         self._cycle_count = 0
+
+        # Fast event detection
+        self._prev_wickets: Dict[str, int] = {}      # match_id → last known wickets
+        self._prev_over_int: Dict[str, int] = {}     # match_id → last over boundary fired
+        self._milestone_fired: set = set()           # "match_id:milestone" already processed
+        self._last_bookmaker_check: Dict[str, float] = {}  # match_id → last bookmaker alert ts
 
         # Semi-auto approval tracking
         self._pending_approvals: Dict[str, dict] = {}   # id → proposal
@@ -178,6 +184,42 @@ class TradingAgent:
             return
 
         for match_id, match_data in data.items():
+            state    = match_data.get("state", {})
+            cur_wkts = int(state.get("total_wickets", 0))
+            cur_over = float(state.get("overs", 0))
+            cur_over_int = int(cur_over)
+
+            # ── Instant wicket detection ──────────────────────────────────
+            prev_wkts = self._prev_wickets.get(match_id, cur_wkts)
+            if cur_wkts > prev_wkts:
+                self._prev_wickets[match_id] = cur_wkts
+                # Force Gemini bypass-cache on wicket
+                self.ai_reasoner._last_over = -1.0
+                asyncio.create_task(
+                    self._on_wicket_event(match_id, match_data, cur_wkts)
+                )
+            else:
+                self._prev_wickets[match_id] = cur_wkts
+
+            # ── Over milestone detection (3, 6, 10, 15, 16, 18) ──────────
+            prev_ov = self._prev_over_int.get(match_id, 0)
+            if cur_over_int > prev_ov:
+                for milestone in (3, 6, 10, 15, 16, 18, 20):
+                    key = f"{match_id}:ov{milestone}"
+                    if prev_ov < milestone <= cur_over_int and key not in self._milestone_fired:
+                        self._milestone_fired.add(key)
+                        asyncio.create_task(
+                            self._on_over_milestone(match_id, match_data, milestone)
+                        )
+                self._prev_over_int[match_id] = cur_over_int
+
+            # ── Bookmaker edge check (every 30s per match) ────────────────
+            import time as _time
+            last_bm = self._last_bookmaker_check.get(match_id, 0)
+            if _time.monotonic() - last_bm > 30:
+                self._last_bookmaker_check[match_id] = _time.monotonic()
+                asyncio.create_task(self._check_bookmaker_edge(match_id, match_data))
+
             # Update simulated exchange odds
             if isinstance(self.exchange, SimulatedExchange):
                 self.exchange.set_odds(
@@ -437,6 +479,288 @@ class TradingAgent:
             msg = result.get("message", "unknown") if isinstance(result, dict) else result.message
             self._log_action("STOP_LOSS_FAILED", msg)
 
+    # ── Wicket Event ─────────────────────────────────────────────────────────
+
+    async def _on_wicket_event(self, match_id: str, data: dict, wickets: int):
+        """Immediate analysis on wicket — check loss cut and send alert."""
+        state  = data["state"]
+        odds_a = data["odds_a"]
+        odds_b = data["odds_b"]
+        s      = lambda k, d=None: state.get(k, d)
+        overs  = float(s("overs", 0))
+        runs   = int(s("total_runs", 0))
+        match  = f"{s('team_a','?')} vs {s('team_b','?')}"
+        score  = f"{runs}/{wickets}"
+
+        logger.info(f"⚡ WICKET EVENT: {match} — {score} in {overs:.1f} overs")
+
+        position = self.position_manager.get_match_position(match_id)
+
+        # Force immediate AI analysis on wicket
+        if self.ai_reasoner.is_available:
+            try:
+                ml_pred = self.ml_model.predict(state)
+                decision = self.decision_engine.evaluate(
+                    self._build_match_context(match_id, data, position)
+                )
+                ai_result = await self.ai_reasoner.reason(
+                    match_state=state,
+                    odds={"team_a_odds": odds_a, "team_b_odds": odds_b, "bookmaker": data.get("bookmaker", {})},
+                    ml_prediction={"win_probability": ml_pred.win_probability, "confidence": ml_pred.confidence, "momentum_score": ml_pred.momentum_score, "model_version": ml_pred.model_version},
+                    decision_engine_output=decision.to_dict(),
+                    position=position.to_dict() if position else None,
+                    telegram_signals=data.get("telegram_signals", []),
+                    historical=self.historical_db,
+                )
+                action = ai_result.get("action", "HOLD")
+                conf   = ai_result.get("confidence", 0)
+                reason = ai_result.get("reasoning", "")
+
+                if action == "LOSS_CUT" and position and conf >= 0.65:
+                    try:
+                        from telegram_bot.notifier import send_loss_cut
+                        await send_loss_cut(
+                            team=position.backed_team,
+                            entry_odds=position.entry_odds,
+                            current_odds=odds_a if position.backed_team == s("team_a") else odds_b,
+                            pnl=position.unrealized_pnl,
+                            match=match,
+                        )
+                    except Exception:
+                        pass
+                    await self._execute_stop_loss(match_id, position, data,
+                        odds_a if position.backed_team == s("team_a") else odds_b)
+                elif action in ("HOLD", "BOOKSET") and conf >= 0.70:
+                    # Send anti-panic signal
+                    try:
+                        from telegram_bot.notifier import send_anti_panic
+                        sig = "CUT" if action == "LOSS_CUT" else "HOLD"
+                        await send_anti_panic(
+                            signal=sig,
+                            team=position.backed_team if position else s("team_a", ""),
+                            overs=overs, score=score, match=match, reasoning=reason,
+                        )
+                    except Exception:
+                        pass
+            except Exception as e:
+                logger.debug(f"Wicket AI analysis error: {e}")
+
+    # ── Over Milestone ────────────────────────────────────────────────────────
+
+    async def _on_over_milestone(self, match_id: str, data: dict, milestone: int):
+        """
+        Fire at key over boundaries (3, 6, 10, 15, 16, 18).
+        - Over 3: predict powerplay score → SESSION call on 6-over runs market
+        - Over 6: PP complete → confirm PP score, fire match odds signal
+        - Over 10: midway → batting team chance assessment
+        - Over 15: pre-death → ENTER or SESSION for final runs
+        - Over 16+: death — high-value window
+        """
+        state  = data["state"]
+        odds_a = data["odds_a"]
+        odds_b = data["odds_b"]
+        s      = lambda k, d=None: state.get(k, d)
+        overs  = float(s("overs", 0))
+        runs   = int(s("total_runs", 0))
+        wickets= int(s("total_wickets", 0))
+        rr     = float(s("run_rate", 0))
+        match  = f"{s('team_a','?')} vs {s('team_b','?')}"
+        venue  = s("venue", "")
+        innings= int(s("innings", 1))
+
+        logger.info(f"🎯 OVER MILESTONE {milestone}: {match} — {runs}/{wickets} in {overs:.1f}ov @ {rr:.2f}rpo")
+
+        # Force Gemini call at each milestone (clear cache)
+        self.ai_reasoner._last_over = -1.0
+
+        # ── Powerplay prediction (at over 3, project PP total) ────────────
+        if milestone == 3 and innings == 1 and wickets <= 2:
+            proj_pp = runs + int(rr * 3)  # 3 more overs at current RPO
+            venue_stats = self.historical_db.get_venue_stats(venue)
+            pp_avg = venue_stats.get("avg_powerplay", 52)
+            diff   = proj_pp - pp_avg
+            side   = "YES" if diff >= 3 else "NO"
+            conf   = min(0.82, 0.60 + abs(diff) * 0.015)
+
+            if conf >= 0.70 and data.get("sessions"):
+                pp_sessions = [ss for ss in data.get("sessions", []) if "6 over" in ss.get("label", "").lower() or "powerplay" in ss.get("label", "").lower() or "pp run" in ss.get("label", "").lower()]
+                if not pp_sessions:
+                    pp_sessions = data.get("sessions", [])[:1]
+                for pp_sess in pp_sessions[:1]:
+                    label = pp_sess.get("label", f"6 Over Runs {s('team_a','')}")
+                    line  = pp_sess.get("yes" if side=="YES" else "no", 0)
+                    proposal = {
+                        "type": "SESSION", "label": label, "side": side,
+                        "stake": 200.0, "confidence": conf,
+                        "reasoning": f"At {overs:.1f}ov: {runs}/{wickets} @ {rr:.1f}rpo → projected PP={proj_pp}, venue avg={pp_avg}. {'Above' if diff>0 else 'Below'} par by {abs(diff)} runs.",
+                        "match_id": match_id, "predicted_runs": proj_pp,
+                        "prob_over": conf if side=="YES" else 1-conf,
+                        "prob_under": conf if side=="NO" else 1-conf,
+                        "state": state,
+                    }
+                    await self._route_decision(proposal, self._execute_session_trade)
+
+        # ── PP complete (over 6) — send match state assessment ────────────
+        elif milestone == 6:
+            venue_stats = self.historical_db.get_venue_stats(venue)
+            pp_avg = venue_stats.get("avg_powerplay", 52)
+            desc   = "STRONG" if runs > pp_avg + 8 else ("WEAK" if runs < pp_avg - 8 else "ON PAR")
+            try:
+                from telegram_bot.notifier import send_info
+                await send_info(
+                    f"🏏 *PP COMPLETE — {match}*\n"
+                    f"Score: *{runs}/{wickets}* in 6 overs (avg: {pp_avg})\n"
+                    f"Powerplay: *{desc}* | RPO: {rr:.1f}\n"
+                    f"Match odds: {s('team_a','')} {odds_a:.2f} | {s('team_b','')} {odds_b:.2f}"
+                )
+            except Exception:
+                pass
+
+        # ── Death entry window (over 15-16) ──────────────────────────────
+        elif milestone in (15, 16) and innings == 1:
+            position = self.position_manager.get_match_position(match_id)
+            if not position:
+                # Evaluate entry in death
+                ml_pred  = self.ml_model.predict(state)
+                decision = self.decision_engine.evaluate(
+                    self._build_match_context(match_id, data, position)
+                )
+                if self.ai_reasoner.is_available:
+                    try:
+                        ai = await self.ai_reasoner.reason(
+                            match_state=state,
+                            odds={"team_a_odds": odds_a, "team_b_odds": odds_b, "bookmaker": data.get("bookmaker", {})},
+                            ml_prediction={"win_probability": ml_pred.win_probability, "confidence": ml_pred.confidence, "momentum_score": ml_pred.momentum_score, "model_version": ml_pred.model_version},
+                            decision_engine_output=decision.to_dict(),
+                            position=None,
+                            telegram_signals=data.get("telegram_signals", []),
+                            historical=self.historical_db,
+                        )
+                        if ai.get("action") == "ENTER" and ai.get("confidence", 0) >= 0.72:
+                            proposal = self._build_entry_proposal(match_id, state, decision, odds_a, odds_b)
+                            if proposal:
+                                proposal["confidence"] = ai["confidence"]
+                                proposal["reasoning"]  = f"🧠 Death entry: {ai.get('reasoning','')}"
+                                proposal["ai_source"]  = "gemini"
+                                await self._route_decision(proposal, self._execute_entry_from_proposal)
+                    except Exception as e:
+                        logger.debug(f"Death entry AI: {e}")
+
+        # ── Over 10 midway assessment ─────────────────────────────────────
+        elif milestone == 10 and innings == 2:
+            rrr = float(s("required_run_rate", 0))
+            if rrr > 0 and rr > 0:
+                diff = rr - rrr
+                if abs(diff) >= 1.5:
+                    side_desc = "CHASING WELL" if diff > 0 else "BEHIND TARGET"
+                    try:
+                        from telegram_bot.notifier import send_info
+                        await send_info(
+                            f"📊 *MIDWAY UPDATE — {match}*\n"
+                            f"Score: *{runs}/{wickets}* in 10 overs\n"
+                            f"CRR: {rr:.2f} | RRR: {rrr:.2f} → *{side_desc}*\n"
+                            f"Odds: {s('team_a','')} {odds_a:.2f} | {s('team_b','')} {odds_b:.2f}"
+                        )
+                    except Exception:
+                        pass
+
+    # ── Bookmaker Edge ────────────────────────────────────────────────────────
+
+    async def _check_bookmaker_edge(self, match_id: str, data: dict):
+        """Detect bookmaker price divergence from match odds and alert."""
+        bookmaker = data.get("bookmaker", {})
+        if not bookmaker:
+            return
+        state  = data["state"]
+        odds_a = data["odds_a"]
+        odds_b = data["odds_b"]
+        s      = lambda k, d=None: state.get(k, d)
+        overs  = float(s("overs", 0))
+        runs   = int(s("total_runs", 0))
+        wkts   = int(s("total_wickets", 0))
+        score  = f"{runs}/{wkts}"
+        match  = f"{s('team_a','?')} vs {s('team_b','?')}"
+
+        for team_key, bm_data in bookmaker.items():
+            if not isinstance(bm_data, dict):
+                continue
+            bm_back = float(bm_data.get("back", 0) or 0)
+            if bm_back <= 0:
+                continue
+
+            # Convert bookmaker 100-base to decimal
+            if bm_back > 10:
+                bm_decimal = (bm_back / 100) + 1
+            else:
+                bm_decimal = bm_back
+
+            # Determine market odds for this team
+            team_a = s("team_a", "")
+            team_b = s("team_b", "")
+            if team_key.lower() in team_a.lower() or team_a.lower() in team_key.lower():
+                market_odds = odds_a
+            elif team_key.lower() in team_b.lower() or team_b.lower() in team_key.lower():
+                market_odds = odds_b
+            else:
+                continue
+
+            if market_odds <= 0:
+                continue
+
+            edge = abs(bm_decimal - market_odds) / market_odds
+            if edge >= 0.06:  # 6%+ divergence = bookmaker edge
+                stake = min(300.0, self.risk_manager.max_stake_per_trade * 0.3)
+                try:
+                    from telegram_bot.notifier import send_bookmaker_call
+                    await send_bookmaker_call(
+                        team=team_key,
+                        bookmaker_odds=bm_decimal,
+                        match_odds=market_odds,
+                        edge=edge,
+                        stake=stake,
+                        overs=overs,
+                        score=score,
+                        match=match,
+                    )
+                    logger.info(f"Bookmaker edge signal: {team_key} BM={bm_decimal:.2f} MO={market_odds:.2f} edge={edge:.1%}")
+                except Exception:
+                    pass
+
+    def _build_match_context(self, match_id, data, position):
+        """Build MatchContext for decision engine."""
+        from strategy_engine.decision_engine import MatchContext
+        state  = data["state"]
+        odds_a = data["odds_a"]
+        odds_b = data["odds_b"]
+        ml     = self.ml_model.predict(state)
+        if position:
+            entry_odds  = position.entry_odds
+            backed_team = "A" if position.backed_team == state.get("team_a") else "B"
+        else:
+            entry_odds  = odds_a
+            backed_team = "A"
+        return MatchContext(
+            match_id=int(match_id) if str(match_id).isdigit() else 1,
+            team_a=state.get("team_a", "Team A"),
+            team_b=state.get("team_b", "Team B"),
+            innings=int(state.get("innings", 1)),
+            current_over=float(state.get("overs", 0)),
+            total_runs=int(state.get("total_runs", 0)),
+            total_wickets=int(state.get("total_wickets", 0)),
+            run_rate=float(state.get("run_rate", 0)),
+            required_run_rate=float(state.get("required_run_rate", 0)),
+            target=int(state.get("target", 0)),
+            team_a_odds=odds_a,
+            team_b_odds=odds_b,
+            stake=self.risk_manager.max_stake_per_trade,
+            entry_odds=entry_odds,
+            backed_team=backed_team,
+            win_probability=ml.win_probability,
+            momentum_score=ml.momentum_score,
+            is_wicket_just_fell=state.get("last_ball") == "W",
+            telegram_signals=data.get("telegram_signals", []),
+        )
+
     # ── Analyze ─────────────────────────────────────────────────────────────
 
     async def _analyze(self, match_id, data, position) -> Optional[object]:
@@ -446,37 +770,24 @@ class TradingAgent:
         odds_b = data["odds_b"]
 
         ml_pred = self.ml_model.predict(state)
-
-        if position:
-            entry_odds  = position.entry_odds
-            backed_team = "A" if position.backed_team == state.get("team_a") else "B"
-        else:
-            entry_odds  = odds_a
-            backed_team = "A"
-
-        ctx = MatchContext(
-            match_id         = int(match_id) if str(match_id).isdigit() else 1,
-            team_a           = state.get("team_a", "Team A"),
-            team_b           = state.get("team_b", "Team B"),
-            innings          = int(state.get("innings", 1)),
-            current_over     = float(state.get("overs", 0)),
-            total_runs       = int(state.get("total_runs", 0)),
-            total_wickets    = int(state.get("total_wickets", 0)),
-            run_rate         = float(state.get("run_rate", 0)),
-            required_run_rate = float(state.get("required_run_rate", 0)),
-            target           = int(state.get("target", 0)),
-            team_a_odds      = odds_a,
-            team_b_odds      = odds_b,
-            stake            = self.risk_manager.max_stake_per_trade,
-            entry_odds       = entry_odds,
-            backed_team      = backed_team,
-            win_probability  = ml_pred.win_probability,
-            momentum_score   = ml_pred.momentum_score,
-            is_wicket_just_fell = state.get("last_ball") == "W",
-            telegram_signals = data.get("telegram_signals", []),
-        )
-
+        ctx     = self._build_match_context(match_id, data, position)
         decision = self.decision_engine.evaluate(ctx)
+
+        # ── Auto-bookset: check if position profit is lockable ────────────
+        if position and position.status.value == "OPEN" and decision.signal != "LOSS_CUT":
+            backed_team = position.backed_team
+            curr_odds   = odds_a if backed_team == state.get("team_a") else odds_b
+            entry_odds  = position.entry_odds
+            if entry_odds > 0 and curr_odds > 0:
+                compression = curr_odds / entry_odds
+                if compression <= 0.70:  # odds dropped to 70% → guaranteed profit available
+                    decision.signal    = "BOOKSET"
+                    decision.bookset   = True
+                    decision.confidence = 0.88
+                    decision.reasoning  = (
+                        f"BOOKSET: {backed_team} moved from {entry_odds:.2f}→{curr_odds:.2f} "
+                        f"({compression:.0%} of entry). Lock guaranteed profit now."
+                    )
 
         # AI Reasoner for borderline/conflicting/critical moments
         telegram_signals = data.get("telegram_signals", [])
@@ -526,6 +837,26 @@ class TradingAgent:
                     decision.reasoning = f"🧠 {ai_result.get('reasoning', '')}"
                     if ai_result.get("team"):
                         decision.entry_team = ai_result["team"]
+
+                # If Gemini recommends a session call, fire it now
+                sc = ai_result.get("session_call")
+                if sc and isinstance(sc, dict) and ai_conf >= 0.70:
+                    sess_proposal = {
+                        "type":          "SESSION",
+                        "label":         sc.get("label", "Session"),
+                        "side":          sc.get("side", "YES"),
+                        "stake":         200.0,
+                        "confidence":    ai_conf,
+                        "reasoning":     f"🧠 {ai_result.get('reasoning','')} | Line:{sc.get('line')} Proj:{sc.get('projected')}",
+                        "match_id":      match_id,
+                        "predicted_runs": float(sc.get("projected", 0) or 0),
+                        "prob_over":     ai_conf if sc.get("side","YES") == "YES" else 1 - ai_conf,
+                        "prob_under":    ai_conf if sc.get("side","YES") == "NO" else 1 - ai_conf,
+                        "state":         state,
+                    }
+                    asyncio.create_task(
+                        self._route_decision(sess_proposal, self._execute_session_trade)
+                    )
             except Exception as e:
                 logger.warning(f"AI Reasoner: {e}")
 

@@ -53,36 +53,45 @@ class AIReasoner:
     - Native JSON mode
     """
 
-    SYSTEM_PROMPT = """You are an elite cricket trading analyst specializing in IPL T20 markets on RoyalBook exchange.
+    SYSTEM_PROMPT = """You are an elite cricket trading analyst for IPL T20 betting on RoyalBook.win exchange (India).
 
-You have deep expertise in:
-- T20 match momentum and phase analysis (powerplay 1-6, middle 7-15, death 16-20)
-- RoyalBook markets: Match Odds (back/lay), Bookmaker (100-based prices), Sessions/Fancy
-- Kelly criterion and bankroll management for Indian exchanges
-- Loss cut timing (when to hedge vs hold through a wicket)
-- Bookset opportunities (lock guaranteed profit both sides)
-- Session/fancy market value (powerplay runs, over-specific lines)
+MARKETS YOU ANALYSE:
+1. Match Odds (decimal) — back/lay teams
+2. Bookmaker (100-base prices, e.g. 108 means 1.08x)
+3. Sessions/Fancy — over runs lines, powerplay runs, player runs, wicket markets
+4. Premium Sessions — same as sessions but higher stakes
 
-CRITICAL RULES:
-1. Powerplay (overs 1-6): avg IPL powerplay = 52 runs. If score pace > 9 RPO after 3 overs → SESSION YES is value.
-2. Death overs (16-20): highest volatility. Only ENTER with 80%+ confidence. BOOKSET aggressively.
-3. Loss cut: if backed team odds rose >20% from entry AND wicket just fell → LOSS_CUT immediately.
-4. Bookset: odds compressed to 70% of entry or below → BOOKSET to lock guaranteed profit.
-5. Bookmaker market: if bookmaker price differs >8% from match odds → BOOKMAKER_EDGE opportunity.
-6. Never fight 3+ wicket collapse — always LOSS_CUT or HOLD with very high caution.
-7. 2nd innings chasing: if CRR < RRR by >1.5 after over 10 → backing fielding team has value.
+PHASE BENCHMARKS (17yr IPL averages):
+- Powerplay (ov 1-6): 52 runs avg. Top team = 60+. Weak = <44.
+- Middle (ov 7-15): 8.5 RPO avg. Batting pitch = 9.5+.
+- Death (ov 16-20): 50 runs avg. Aggressive team = 58+.
+- Full 20 overs: 167 avg. Good score = 180+. Defend = 155+.
 
-Respond ONLY in this exact JSON (no markdown):
+SIGNAL RULES (fire immediately when condition met):
+1. ENTER: confidence ≥ 72%. Best entry: over 2-4 (PP momentum) or over 7-9 (innings shape clear).
+2. BOOKSET: team odds drop to ≤70% of entry → lay to lock profit. Always fire. No delay.
+3. LOSS_CUT: backed team odds rose ≥20% from entry + wicket fell → hedge immediately.
+4. SESSION YES: projected runs > market line + 4 at current RPO. Best value = 55%+ probability.
+5. SESSION NO: current RPO trending down, wickets in middle overs, projected runs < line - 3.
+6. STOP_LOSS: 3+ wickets in collapse, CRR < RRR by 2+ in 2nd innings → back opponent.
+
+SPEED IS CRITICAL:
+- At over 3.0 with score data: predict PP total and fire SESSION on 6-over runs BEFORE it ends.
+- At over 5.4 (last ball of PP): confirm PP trend and fire match odds signal.
+- On every wicket: immediately assess loss_cut vs hold.
+- Death overs: fire ENTER on underdog only if collapse confirmed on OTHER team.
+
+Respond ONLY in this exact JSON (no markdown, no explanation):
 {
-    "action": "ENTER|LOSS_CUT|BOOKSET|SESSION|HOLD",
+    "action": "ENTER|LOSS_CUT|BOOKSET|SESSION|STOP_LOSS|HOLD",
     "confidence": 0-100,
-    "team": "team name or null",
-    "market": "match_odds|bookmaker|session",
-    "reasoning": "2-3 sentences with specific numbers",
-    "risk_notes": "specific risk factors",
+    "team": "full team name or null",
+    "market": "match_odds|bookmaker|session|premium_session",
+    "reasoning": "2-3 lines with specific numbers and projections",
+    "risk_notes": "1 line risk",
     "key_factors": ["factor1", "factor2", "factor3"],
-    "bookset_odds": null,
-    "session_call": null
+    "session_call": {"label": "6 Over Runs KKR", "side": "YES", "line": 58, "projected": 63},
+    "bookset_odds": null
 }"""
 
     def __init__(self, api_key: str = "", model: str = "gemini-2.0-flash"):
@@ -91,14 +100,14 @@ Respond ONLY in this exact JSON (no markdown):
         self._available = False
         self._model_instance = None
 
-        # Rate limiter: 10 calls/min (free tier is 15 RPM — 33% safety margin)
+        # Rate limiter: 10 calls/min (Google Cloud key = 1000 RPM, but safe margin)
         self._limiter = _RateLimiter(calls=10, window_secs=60)
 
-        # Over-based cache: skip re-analysis if same over + same signal in last 60s
+        # Over-based cache: skip re-analysis if same over + same signal in last 20s
         self._last_over: float = -1.0
         self._last_signal: str = ""
         self._last_call_ts: float = 0.0
-        self._cache_ttl: float = 45.0  # don't re-analyze same over within 45s
+        self._cache_ttl: float = 20.0  # 20s cache — faster refresh after wickets/boundaries
 
         if api_key:
             try:
@@ -187,7 +196,15 @@ Respond ONLY in this exact JSON (no markdown):
 
         except Exception as e:
             logger.error(f"Gemini error: {e}")
-            return self._fallback_reasoning(decision_engine_output)
+            # Retry once on transient errors
+            try:
+                import asyncio
+                await asyncio.sleep(1)
+                self._limiter.record()
+                response = await self._model_instance.generate_content_async(prompt)
+                return self._parse_response(response.text)
+            except Exception:
+                return self._fallback_reasoning(decision_engine_output)
 
     def _build_prompt(self, state, odds, ml, decision, position, telegram, historical=None) -> str:
         overs   = float(state.get("overs", 0))
@@ -200,13 +217,22 @@ Respond ONLY in this exact JSON (no markdown):
 
         parts = []
 
+        # Projected scores
+        overs_remaining = max(0, 20 - overs)
+        proj_total = runs + int(rr * overs_remaining) if rr > 0 else 0
+        proj_6ov   = runs + int(rr * max(0, 6 - overs)) if overs < 6 and rr > 0 else runs if overs >= 6 else 0
+        proj_10ov  = runs + int(rr * max(0, 10 - overs)) if overs < 10 and rr > 0 else runs if overs >= 10 else 0
+        proj_20ov  = proj_total
+
         parts.append(
             f"=== LIVE MATCH ===\n"
             f"{state.get('team_a','Team A')} vs {state.get('team_b','Team B')}\n"
             f"Score: {runs}/{wickets} in {overs:.1f} overs | Phase: {phase}\n"
             f"Innings: {state.get('innings',1)} | Target: {target or 'N/A (1st innings)'}\n"
             f"CRR: {rr:.2f} | RRR: {rrr:.2f if rrr else 'N/A'}\n"
-            f"Last ball: {state.get('last_ball','-')} | Wicket just fell: {state.get('last_ball')=='W'}"
+            f"Last ball: {state.get('last_ball','-')} | Wicket just fell: {state.get('last_ball')=='W'}\n"
+            f"PROJECTIONS @ current RPO {rr:.1f}: "
+            f"6ov={proj_6ov if overs<6 else 'done'} | 10ov={proj_10ov if overs<10 else 'done'} | Final={proj_20ov}"
         )
 
         bm = odds.get("bookmaker", {})
