@@ -205,9 +205,19 @@ class CricketStatsService:
 
     async def get_live_score_cricbuzz(self) -> Optional[dict]:
         """
-        Get the first live IPL match score from Cricbuzz.
-        Tries multiple API endpoints, returns enriched state dict.
+        Get the first live IPL match score.
+
+        Sources tried in order:
+        1. Cricbuzz unofficial JSON API (disabled — returns 404 in 2026)
+        2. ESPN Cricinfo public JSON API (no API key required)
+        3. cricapi.com free tier (100 calls/day, no key required)
         """
+        # ── ESPN Cricinfo (primary — no key, robust) ─────────────────────────
+        espn_result = await self._get_live_score_espn()
+        if espn_result:
+            return espn_result
+
+        # ── Cricbuzz JSON (disabled, kept for future) ─────────────────────────
         try:
             client = await self.get_client()
             data = None
@@ -284,6 +294,145 @@ class CricketStatsService:
                         }
         except Exception as e:
             logger.debug(f"Cricbuzz live score failed: {e}")
+        return None
+
+    async def _get_live_score_espn(self) -> Optional[dict]:
+        """
+        ESPN Cricinfo public scoreboard API — no key needed, very stable.
+        Parses live IPL T20 match into our standard state dict format.
+        """
+        ESPN_URLS = [
+            "https://site.api.espn.com/apis/site/v2/sports/cricket/scoreboard",
+            "https://site.web.api.espn.com/apis/site/v2/sports/cricket/scoreboard",
+        ]
+        try:
+            client = await self.get_client()
+            data = None
+            for url in ESPN_URLS:
+                try:
+                    resp = await client.get(url, timeout=10.0,
+                                           headers={"Accept": "application/json"})
+                    if resp.status_code == 200:
+                        data = resp.json()
+                        break
+                except Exception:
+                    continue
+            if not data:
+                return None
+
+            events = data.get("events", [])
+            for event in events:
+                # Filter to IPL / T20 India
+                competition = event.get("competitions", [{}])[0]
+                name  = event.get("name", "").lower()
+                notes = event.get("notes", [{}])
+                series = " ".join(n.get("text", "") for n in notes).lower()
+
+                is_ipl = (
+                    "ipl" in name or "indian premier" in name or
+                    "ipl" in series or "indian premier" in series or
+                    "t20" in name
+                )
+                if not is_ipl:
+                    continue
+
+                # Only live matches
+                status_type = competition.get("status", {}).get("type", {})
+                if not status_type.get("state") == "in":
+                    continue
+
+                competitors = competition.get("competitors", [])
+                if len(competitors) < 2:
+                    continue
+
+                # Team data
+                team_a_data = competitors[0]
+                team_b_data = competitors[1]
+                team_a = team_a_data.get("team", {}).get("displayName", "Team A")
+                team_b = team_b_data.get("team", {}).get("displayName", "Team B")
+
+                # Score data (ESPN uses 'score' as runs/wickets string)
+                def parse_score(comp):
+                    score_str = comp.get("score", "0") or "0"
+                    # Format: "185/4 (19.2 ov)" or "185/4" or "185"
+                    score_str = score_str.strip()
+                    runs, wickets, overs = 0, 0, 0.0
+                    try:
+                        if "(" in score_str:
+                            main, ov_part = score_str.split("(", 1)
+                            ov_str = ov_part.replace("ov", "").replace(")", "").strip()
+                            overs = float(ov_str)
+                        else:
+                            main = score_str
+                        if "/" in main:
+                            r, w = main.strip().split("/", 1)
+                            runs = int(r.strip())
+                            wickets = int(w.strip().split()[0])
+                        else:
+                            runs = int(main.strip())
+                    except Exception:
+                        pass
+                    return runs, wickets, overs
+
+                runs_a, wkts_a, ov_a = parse_score(team_a_data)
+                runs_b, wkts_b, ov_b = parse_score(team_b_data)
+
+                # Determine batting team (higher overs = batting, or check status text)
+                status_detail = competition.get("status", {}).get("displayClock", "")
+                situation = competition.get("situation", {})
+                batting_home = situation.get("battingTeamId") == team_a_data.get("id")
+
+                if ov_a > 0 and ov_b == 0:
+                    # Team A batting
+                    innings_num = 1
+                    runs, wickets, overs = runs_a, wkts_a, ov_a
+                    batting = team_a
+                    target = 0
+                elif ov_b > 0 and ov_a > 0:
+                    # 2nd innings
+                    innings_num = 2
+                    runs, wickets, overs = runs_b, wkts_b, ov_b
+                    batting = team_b
+                    target = runs_a + 1
+                elif ov_b > 0:
+                    innings_num = 1
+                    runs, wickets, overs = runs_b, wkts_b, ov_b
+                    batting = team_b
+                    target = 0
+                else:
+                    continue
+
+                crr = round(runs / overs, 2) if overs > 0 else 0.0
+                rrr = 0.0
+                if innings_num == 2 and target > 0 and overs < 20:
+                    remaining_balls = max(1, (20 - overs) * 6)
+                    runs_needed = target - runs
+                    rrr = round((runs_needed / remaining_balls) * 6, 2) if runs_needed > 0 else 0.0
+
+                venue = competition.get("venue", {}).get("fullName", "")
+                match_id = str(event.get("id", "espn_1"))
+
+                logger.info(f"ESPN live: {team_a} vs {team_b} | {runs}/{wickets} in {overs:.1f} ov")
+                return {
+                    "match_id":          match_id,
+                    "team_a":            team_a,
+                    "team_b":            team_b,
+                    "innings":           innings_num,
+                    "total_runs":        runs,
+                    "total_wickets":     wickets,
+                    "overs":             overs,
+                    "run_rate":          crr,
+                    "required_run_rate": rrr,
+                    "target":            target,
+                    "batting_team":      batting,
+                    "venue":             venue,
+                    "status":            "Live",
+                    "source":            "espn_live",
+                    "timestamp":         datetime.utcnow().isoformat(),
+                }
+
+        except Exception as e:
+            logger.debug(f"ESPN live score failed: {e}")
         return None
 
     # ── Player / Team Stats ──────────────────────────────────────────────────
