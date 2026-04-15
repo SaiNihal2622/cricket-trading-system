@@ -102,6 +102,10 @@ class ValueStrategyEngine:
         crr     = float(state.get("run_rate", 0))
         rrr     = float(state.get("required_run_rate", 0))
 
+        # Don't signal before match starts (ball 1 not yet bowled)
+        if overs < 0.1:
+            return None
+
         # Don't enter in last 2 overs — too late, high variance
         if overs >= 18:
             return None

@@ -683,10 +683,15 @@ class TradingAgent:
         odds_b = data["odds_b"]
         s      = lambda k, d=None: state.get(k, d)
         overs  = float(s("overs", 0))
-        runs   = int(s("total_runs", 0))
-        wkts   = int(s("total_wickets", 0))
-        score  = f"{runs}/{wkts}"
-        match  = f"{s('team_a','?')} vs {s('team_b','?')}"
+
+        # Never alert before match starts
+        if overs < 0.1:
+            return
+
+        runs  = int(s("total_runs", 0))
+        wkts  = int(s("total_wickets", 0))
+        score = f"{runs}/{wkts}"
+        match = f"{s('team_a','?')} vs {s('team_b','?')}"
 
         for team_key, bm_data in bookmaker.items():
             if not isinstance(bm_data, dict):
@@ -717,21 +722,35 @@ class TradingAgent:
             edge = abs(bm_decimal - market_odds) / market_odds
             if edge >= 0.06:  # 6%+ divergence = bookmaker edge
                 stake = min(300.0, self.risk_manager.max_stake_per_trade * 0.3)
-                try:
-                    from telegram_bot.notifier import send_bookmaker_call
-                    await send_bookmaker_call(
-                        team=team_key,
-                        bookmaker_odds=bm_decimal,
-                        match_odds=market_odds,
-                        edge=edge,
-                        stake=stake,
-                        overs=overs,
-                        score=score,
-                        match=match,
-                    )
-                    logger.info(f"Bookmaker edge signal: {team_key} BM={bm_decimal:.2f} MO={market_odds:.2f} edge={edge:.1%}")
-                except Exception:
-                    pass
+                # Route through _route_decision for dedup + confidence gate
+                bm_proposal = {
+                    "type":       "BOOKMAKER_EDGE",
+                    "match_id":   match_id,
+                    "team":       team_key,
+                    "odds":       bm_decimal,
+                    "stake":      stake,
+                    "confidence": min(0.80, 0.60 + edge),
+                    "reasoning":  f"Bookmaker {bm_decimal:.2f} vs market {market_odds:.2f} — {edge:.1%} edge on {team_key}",
+                    "state":      state,
+                    "_bm_send": {   # carry payload for notifier
+                        "bookmaker_odds": bm_decimal, "match_odds": market_odds,
+                        "edge": edge, "score": score, "match": match, "overs": overs,
+                    },
+                }
+                async def _send_bm(p):
+                    try:
+                        from telegram_bot.notifier import send_bookmaker_call
+                        bm = p["_bm_send"]
+                        await send_bookmaker_call(
+                            team=p["team"], bookmaker_odds=bm["bookmaker_odds"],
+                            match_odds=bm["match_odds"], edge=bm["edge"],
+                            stake=p["stake"], overs=bm["overs"],
+                            score=bm["score"], match=bm["match"],
+                        )
+                    except Exception:
+                        pass
+                logger.info(f"Bookmaker edge signal: {team_key} BM={bm_decimal:.2f} MO={market_odds:.2f} edge={edge:.1%}")
+                await self._route_decision(bm_proposal, _send_bm)
 
     def _build_match_context(self, match_id, data, position):
         """Build MatchContext for decision engine."""

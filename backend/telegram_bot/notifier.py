@@ -19,12 +19,50 @@ All signal types:
   ANTI-PANIC (HOLD/EXIT) | MATCH STARTED | DAILY SUMMARY | INFO
 """
 import asyncio
+import hashlib
 import logging
+import time
 import httpx
 from datetime import datetime
 from typing import Optional
 
 logger = logging.getLogger(__name__)
+
+# ── Message-level deduplication ──────────────────────────────────────────────
+# Catches ALL duplicate signals regardless of code path.
+# Key: MD5 of first 200 chars of message body (strips timestamp line so same
+# signal at different times is still deduplicated within the cooldown window).
+_msg_dedup: dict = {}           # hash → last_sent monotonic timestamp
+_MSG_DEDUP_WINDOW = 480.0       # 8 minutes — same message suppressed for 8 min
+_INFO_DEDUP_WINDOW = 30.0       # info/match-started: 30s cooldown only
+
+
+def _msg_hash(message: str) -> str:
+    """Hash the message content minus the timestamp line (last line)."""
+    lines = message.strip().splitlines()
+    # Drop the last line if it looks like a timestamp (⏰ HH:MM:SS IST)
+    if lines and lines[-1].startswith("⏰"):
+        lines = lines[:-1]
+    body = "\n".join(lines)[:200]
+    return hashlib.md5(body.encode("utf-8", errors="replace")).hexdigest()
+
+
+def _is_duplicate(message: str) -> bool:
+    """Return True if this message was already sent within the dedup window."""
+    h   = _msg_hash(message)
+    now = time.monotonic()
+    # Shorter window for non-critical info messages
+    window = _INFO_DEDUP_WINDOW if message.startswith("ℹ️") else _MSG_DEDUP_WINDOW
+    last   = _msg_dedup.get(h, 0)
+    if now - last < window:
+        return True
+    _msg_dedup[h] = now
+    return False
+
+
+def clear_dedup_cache():
+    """Call between matches to reset dedup state."""
+    _msg_dedup.clear()
 
 # ── Bot API sender (primary) ─────────────────────────────────────────────────
 _bot_token: str = ""
@@ -130,8 +168,16 @@ async def send_signal(message: str):
     """
     Send a message via Bot API (primary) or Telethon (fallback).
     Caller should await directly for zero delay on critical signals.
+
+    Built-in deduplication: identical messages suppressed for 8 minutes.
+    This is the catch-all — prevents bombing regardless of which code path fires.
     """
     global _bot_ready, _tele_ready
+
+    # ── Dedup check (catch-all at send level) ─────────────────────────────
+    if _is_duplicate(message):
+        logger.debug(f"Notifier dedup: suppressed duplicate message ({message[:60]!r})")
+        return
 
     # ── Try Bot API first ──────────────────────────────────────────────────
     if _bot_ready:
