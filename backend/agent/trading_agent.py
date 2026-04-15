@@ -105,6 +105,13 @@ class TradingAgent:
         self._milestone_fired: set = set()           # "match_id:milestone" already processed
         self._last_bookmaker_check: Dict[str, float] = {}  # match_id → last bookmaker alert ts
 
+        # Deduplication — prevent same signal bombing
+        self._last_signal_sent: Dict[str, float] = {}  # "type:team:match_id" → monotonic ts
+        self._signal_cooldown = 300.0  # 5 min per signal type per team per match
+
+        # Crisis entry tracking
+        self._crisis_entry_fired: set = set()  # "match_id:team" already crisis-entered
+
         # Semi-auto approval tracking
         self._pending_approvals: Dict[str, dict] = {}   # id → proposal
         self._approval_timeout  = 30  # seconds
@@ -867,13 +874,73 @@ class TradingAgent:
     async def _evaluate_value_opportunity(self, match_id: str, data: dict):
         """
         Check for high-odds value entries when the rule engine says HOLD.
-        This catches: teams at 10+ odds where recovery is possible.
-        Also handles: 40+ odds via lay on opposite side.
+        Priority 1: CRISIS ENTRY — odds 8-20+ (team in big trouble, recovery possible)
+        Priority 2: Normal value engine for mid-range opportunities.
         """
         state  = data["state"]
         odds_a = data["odds_a"]
         odds_b = data["odds_b"]
+        overs  = float(state.get("overs", 0))
+        wickets= int(state.get("total_wickets", 0))
         venue  = data.get("venue", state.get("venue", ""))
+        bankroll = self.risk_manager.bankroll
+
+        # ── CRISIS ENTRY: back team at very high odds (8-20+) ─────────────────
+        for team_key, team_odds in (("A", odds_a), ("B", odds_b)):
+            if 7.0 <= team_odds <= 25.0 and overs >= 0.5:
+                crisis_key = f"{match_id}:{team_key}"
+                if crisis_key in self._crisis_entry_fired:
+                    continue
+
+                team_name = state.get("team_a") if team_key == "A" else state.get("team_b")
+                innings   = int(state.get("innings", 1))
+                rr        = float(state.get("run_rate", 0))
+                rrr       = float(state.get("required_run_rate", 0))
+
+                # Recovery possible?
+                # 1st innings: team lost 3-4 wickets but <over 12 = still set a decent total
+                # 2nd innings: team needs high RRR but has wickets in hand
+                recoverable = False
+                if innings == 1 and wickets <= 4 and overs <= 14:
+                    recoverable = True  # lower order can still score 120+
+                elif innings == 2 and wickets <= 4 and rrr <= 14.0:
+                    recoverable = True  # high but achievable RRR with wickets in hand
+
+                if not recoverable:
+                    continue
+
+                # Confidence scales with how "recoverable" the situation is
+                conf = 0.72 if team_odds <= 12.0 else 0.68 if team_odds <= 18.0 else 0.64
+                if conf < 0.70:
+                    continue
+
+                # Stake: 40-50% of bankroll for crisis entry (high-EV bet)
+                crisis_stake = min(bankroll * 0.45, 500.0)
+                crisis_stake = max(100.0, crisis_stake)
+
+                # Bookset target: when odds compress to 30% of entry
+                bookset_at  = round(team_odds * 0.30, 2)
+                stop_loss_at = round(team_odds * 1.35, 2)
+
+                self._crisis_entry_fired.add(crisis_key)
+                proposal = {
+                    "type":          "CRISIS_ENTRY",
+                    "match_id":      match_id,
+                    "team":          team_name,
+                    "odds":          team_odds,
+                    "stake":         crisis_stake,
+                    "confidence":    conf,
+                    "ev":            round((team_odds - 1) * conf - (1 - conf), 3),
+                    "reasoning":     f"CRISIS ENTRY: {team_name} at {team_odds:.1f} odds. {wickets} wkts in {overs:.1f} ov. Recovery possible. Bookset at {bookset_at}.",
+                    "bookset_at":    bookset_at,
+                    "stop_loss_at":  stop_loss_at,
+                    "odds_tier":     "very_high",
+                    "state":         state,
+                    "ai_source":     "crisis_hunter",
+                }
+                logger.info(f"🚨 CRISIS ENTRY: {team_name} @ {team_odds:.1f} ({wickets}wkts/{overs:.1f}ov)")
+                await self._route_decision(proposal, self._execute_entry_from_proposal)
+                return  # Don't double-fire both teams
 
         # Evaluate at any odds — value engine decides internally
         opp = self.value_strategy.evaluate(
@@ -1058,8 +1125,28 @@ class TradingAgent:
         - Semi-auto: publish for user approval, wait 30s
         Only fires Telegram if confidence >= MIN_SIGNAL_CONFIDENCE (default 0.70).
         """
+        import time as _t
         confidence = float(proposal.get("confidence", 0))
         min_conf   = getattr(self.settings, "MIN_SIGNAL_CONFIDENCE", 0.70)
+
+        # ── Pre-match guard: never signal before ball 1 ───────────────────────
+        state = proposal.get("state", {})
+        overs = float(state.get("overs", 0))
+        if overs < 0.1 and proposal.get("type") not in ("SESSION",):
+            logger.debug(f"Signal suppressed: match not started yet (overs={overs})")
+            return
+
+        # ── Deduplication: same signal+team+match → 5 min cooldown ───────────
+        match_id   = str(proposal.get("match_id", "1"))
+        sig_team   = str(proposal.get("team", ""))
+        sig_type   = str(proposal.get("type", ""))
+        dedup_key  = f"{sig_type}:{sig_team}:{match_id}"
+        now_t      = _t.monotonic()
+        last_t     = self._last_signal_sent.get(dedup_key, 0)
+        if now_t - last_t < self._signal_cooldown:
+            logger.debug(f"Dedup: {dedup_key} suppressed (sent {now_t-last_t:.0f}s ago)")
+            return
+        self._last_signal_sent[dedup_key] = now_t
 
         # ── 70%+ confidence gate ─────────────────────────────────────────────
         if confidence < min_conf:
