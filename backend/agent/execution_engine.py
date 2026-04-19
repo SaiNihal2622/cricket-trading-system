@@ -287,8 +287,51 @@ class RoyalBookExchangeAdapter(BaseExchange):
         return {"exchange": "royalbook", "balance": 0.0}
 
 
-def create_exchange(exchange_type: str = "simulated", rb_instance=None, **kwargs) -> BaseExchange:
+class StakeExchangeAdapter(BaseExchange):
+    """Wraps StakeExchange to implement BaseExchange interface."""
+
+    def __init__(self, stake_instance):
+        self._stake = stake_instance
+
+    async def place_back(self, match_id: str, team: str, odds: float, stake: float,
+                         team_a: str = "", team_b: str = "") -> OrderResult:
+        res = await self._stake.place_back(match_id, team, odds, stake, team_a, team_b)
+        return OrderResult(
+            success    = res.get("success", False),
+            order_id   = res.get("bet_id", f"STAKE-BACK-{team[:3].upper()}"),
+            filled_odds= res.get("odds", odds),
+            filled_stake= res.get("amount", stake),
+            message    = res.get("error", ""),
+            exchange   = "stake",
+        )
+
+    async def place_lay(self, match_id: str, team: str, odds: float, stake: float,
+                        team_a: str = "", team_b: str = "") -> OrderResult:
+        res = await self._stake.place_lay(match_id, team, odds, stake, team_a, team_b)
+        return OrderResult(
+            success    = res.get("success", False),
+            order_id   = res.get("bet_id", f"STAKE-LAY-{team[:3].upper()}"),
+            filled_odds= res.get("odds", odds),
+            filled_stake= res.get("amount", stake),
+            message    = res.get("error", ""),
+            exchange   = "stake",
+        )
+
+    async def get_current_odds(self, match_id: str) -> dict:
+        return {}
+
+    async def cancel_order(self, order_id: str) -> bool:
+        return False
+
+    def get_balance(self) -> float:
+        return self._stake.get_balance()
+
+
+def create_exchange(exchange_type: str = "simulated", rb_instance=None,
+                    stake_instance=None, **kwargs) -> BaseExchange:
     """Factory for creating exchanges"""
+    if exchange_type == "stake" and stake_instance:
+        return StakeExchangeAdapter(stake_instance)
     if exchange_type == "royalbook" and rb_instance:
         return RoyalBookExchangeAdapter(rb_instance)
     if exchange_type == "betfair":

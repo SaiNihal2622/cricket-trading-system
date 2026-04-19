@@ -71,10 +71,14 @@ class Settings(BaseSettings):
     MAX_DRAWDOWN_PCT: float = 30.0
 
     # Execution
-    EXCHANGE_TYPE: str = "simulated"        # "simulated", "betfair", "royalbook"
+    EXCHANGE_TYPE: str = "simulated"        # "simulated", "betfair", "royalbook", "stake"
     BETFAIR_APP_KEY: str = ""
     BETFAIR_USERNAME: str = ""
     BETFAIR_PASSWORD: str = ""
+
+    # Stake.com
+    STAKE_ACCESS_TOKEN: str = ""            # x-access-token from browser DevTools
+    STAKE_CURRENCY: str = "usdt"           # "usdt", "btc", "eth", "inr"
 
     # RoyalBook
     ROYALBOOK_USERNAME: str = ""

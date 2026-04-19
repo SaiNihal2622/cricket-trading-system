@@ -51,7 +51,7 @@ class TradingAgent:
     - autopilot=False: proposes bets, waits 30s for user approval via dashboard
     """
 
-    def __init__(self, settings=None, rb_instance=None):
+    def __init__(self, settings=None, rb_instance=None, stake_instance=None):
         from config.settings import settings as default_settings
         self.settings = settings or default_settings
 
@@ -67,9 +67,11 @@ class TradingAgent:
         self.exchange = create_exchange(
             getattr(self.settings, 'EXCHANGE_TYPE', 'simulated'),
             rb_instance    = rb_instance,
+            stake_instance = stake_instance,
             initial_balance = getattr(self.settings, 'INITIAL_BANKROLL', 10000.0),
         )
-        self._rb_instance = rb_instance   # direct reference for stop loss / sessions
+        self._rb_instance    = rb_instance     # direct reference for stop loss / sessions
+        self._stake_instance = stake_instance  # Stake.com direct reference
 
         self.decision_engine  = DecisionEngine()
         self.loss_cut_engine  = LossCutEngine()
@@ -465,8 +467,11 @@ class TradingAgent:
         except Exception:
             hedge_amount = position.total_exposure * 0.8  # fallback: hedge 80%
 
-        # Execute via RoyalBook if available, else simulated
-        if self._rb_instance:
+        # Execute via Stake cashout (cleanest exit), RoyalBook, or simulated
+        if self._stake_instance and self._stake_instance.is_available:
+            results = await self._stake_instance.cashout_all(cashout_pct=1.0)
+            result  = results[0] if results else {"success": True}  # cashout = exit
+        elif self._rb_instance:
             result = await self._rb_instance.place_stop_loss(hedge_team, hedge_amount)
         else:
             result = await self.exchange.place_back(match_id, hedge_team, hedge_odds, hedge_amount)
@@ -1335,12 +1340,19 @@ class TradingAgent:
         stake    = proposal["stake"]
         state    = proposal["state"]
 
-        result = await self.exchange.place_back(match_id, team, odds, stake)
+        # Pass team_a/team_b so Stake can find the right event
+        team_a = state.get("team_a", "")
+        team_b = state.get("team_b", "")
+        result = await self.exchange.place_back(
+            match_id, team, odds, stake,
+            **{"team_a": team_a, "team_b": team_b}
+            if hasattr(self.exchange, '_stake') else {}
+        )
         if isinstance(result, dict):
             success = result.get("success", False)
             msg     = result.get("message", "")
-            filled_odds  = odds
-            filled_stake = stake
+            filled_odds  = result.get("odds", odds)
+            filled_stake = result.get("amount", stake)
         else:
             success      = result.success
             msg          = result.message
@@ -1369,6 +1381,22 @@ class TradingAgent:
             "reasoning":   proposal.get("reasoning"),
         })
         await self._publish_agent_action("ENTRY", position.to_dict())
+
+        # ── Telegram confirmation — bet actually placed on Stake ───────────
+        if self._stake_instance and self._stake_instance.is_available:
+            try:
+                from telegram_bot.notifier import send_info
+                currency = getattr(self.settings, "STAKE_CURRENCY", "usdt").upper()
+                bal      = self._stake_instance.get_balance()
+                await send_info(
+                    f"✅ *BET PLACED ON STAKE*\n"
+                    f"BACK *{team}* @ {filled_odds:.2f}\n"
+                    f"Stake: {filled_stake:.4f} {currency} | "
+                    f"Balance: {bal:.4f} {currency}\n"
+                    f"Potential win: {filled_stake*(filled_odds-1):.4f} {currency}"
+                )
+            except Exception:
+                pass
 
     async def _execute_loss_cut(self, match_id, position, decision, odds_a, odds_b):
         if not decision.loss_cut:

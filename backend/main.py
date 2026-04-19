@@ -96,10 +96,34 @@ async def lifespan(app: FastAPI):
         asyncio.create_task(telegram_bot.start())
         logger.info("✅ Telegram bot started")
 
+    # ── Stake.com integration ─────────────────────────────────────────────────
+    stake_instance = None
+    if settings.EXCHANGE_TYPE == "stake" and getattr(settings, "STAKE_ACCESS_TOKEN", ""):
+        try:
+            from exchange.stake import StakeExchange
+            stake_instance = StakeExchange(
+                access_token = settings.STAKE_ACCESS_TOKEN,
+                currency     = getattr(settings, "STAKE_CURRENCY", "usdt"),
+            )
+            await stake_instance.init()
+            if stake_instance.is_available:
+                app.state.stake = stake_instance
+                logger.info(f"✅ Stake.com exchange ready — balance: {stake_instance.get_balance():.4f}")
+            else:
+                logger.warning("⚠️ Stake.com token invalid — falling back to simulation")
+                stake_instance = None
+        except Exception as e:
+            logger.warning(f"Stake init failed: {e}")
+            stake_instance = None
+
     # Start autonomous trading agent
     if settings.AGENT_ENABLED:
         from agent.trading_agent import TradingAgent
-        trading_agent = TradingAgent(settings, rb_instance=rb_instance)
+        trading_agent = TradingAgent(
+            settings,
+            rb_instance    = rb_instance,
+            stake_instance = stake_instance,
+        )
         await trading_agent.start()
         logger.info(f"✅ Trading agent started (mode: {settings.AGENT_MODE})")
 
@@ -111,7 +135,12 @@ async def lifespan(app: FastAPI):
     # ── Startup ping on Telegram ──────────────────────────────────────────────
     try:
         from telegram_bot.notifier import send_info
-        rb_status  = "✅ RoyalBook live" if rb_instance else "⚠️ RoyalBook offline (mock odds)"
+        if stake_instance and stake_instance.is_available:
+            rb_status = f"✅ Stake.com live ({getattr(settings,'STAKE_CURRENCY','usdt').upper()})"
+        elif rb_instance:
+            rb_status = "✅ RoyalBook live"
+        else:
+            rb_status = "⚙️ Simulation mode (no exchange)"
         ai_status  = "🧠 Gemini Flash" if settings.GEMINI_API_KEY else "⚙️ Rule engine"
         await send_info(
             f"🏏 Cricket Analyst restarted\n"
