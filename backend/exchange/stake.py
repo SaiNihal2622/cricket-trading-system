@@ -143,17 +143,18 @@ class StakeClient:
         bet = await client.place_bet(selection_id, odds, amount)
     """
 
-    GQL_URL  = "https://stake.com/_api/graphql"
+    GQL_URL  = "https://stake.pet/_api/graphql"
     HEADERS  = {
         "Content-Type":   "application/json",
-        "Accept":         "application/json",
-        "Origin":         "https://stake.com",
-        "Referer":        "https://stake.com/sports/cricket",
+        "Accept":         "*/*",
+        "Origin":         "https://stake.pet",
+        "Referer":        "https://stake.pet/",
         "User-Agent":     (
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
             "AppleWebKit/537.36 (KHTML, like Gecko) "
-            "Chrome/122.0.0.0 Safari/537.36"
+            "Chrome/147.0.0.0 Safari/537.36"
         ),
+        "x-language":     "en",
     }
     # Minimum delay between API calls (ms) — avoid ban
     _RATE_LIMIT_MS = 1500
