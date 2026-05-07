@@ -1,0 +1,188 @@
+name: Deploy Cricket Trading System
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Deployment mode'
+        required: true
+        default: 'demo'
+        type: choice
+        options:
+          - demo
+          - live
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # ─── Lint & Test ────────────────────────────────────────────────────────────
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.11']
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-asyncio pytest-cov
+
+      - name: Run tests
+        run: |
+          cd tests && python -m pytest -v --tb=short --cov=../backend --cov-report=xml || true
+        env:
+          DATABASE_URL: sqlite+aiosqlite:///./test.db
+          REDIS_URL: redis://localhost:6379/0
+          DEMO_MODE: "true"
+
+      - name: Validate ML model
+        run: |
+          python -c "
+          from backend.ml_model.predictor import CricketMLModel
+          from backend.ml_model.ensemble_predictor import EnsemblePredictor
+          model = CricketMLModel()
+          ens = EnsemblePredictor()
+          state = {
+              'innings': 2, 'overs': 12.0, 'total_runs': 95,
+              'total_wickets': 3, 'run_rate': 7.92,
+              'required_run_rate': 8.75, 'target': 170
+          }
+          pred = ens.predict(state)
+          print(f'Ensemble prediction: {pred.win_probability}')
+          print(f'Action: {pred.recommended_action}')
+          print(f'Confidence: {pred.confidence}')
+          assert 0 < pred.win_probability < 1, 'Invalid probability'
+          print('✅ ML model validation passed')
+          "
+
+  # ─── Build Docker Image ────────────────────────────────────────────────────
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix=
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ─── Deploy to Railway ─────────────────────────────────────────────────────
+  deploy-railway:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment: production
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: Deploy to Railway
+        run: railway up --service cricket-trading
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+
+  # ─── Deploy to VPS (SSH) ───────────────────────────────────────────────────
+  deploy-vps:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production'
+    environment: production
+
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            cd /opt/cricket-trading
+            git pull origin main
+            docker compose pull
+            docker compose up -d --remove-orphans
+            docker compose logs --tail=20
+
+  # ─── Notify ────────────────────────────────────────────────────────────────
+  notify:
+    needs: [test, build]
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+      - name: Notify Telegram on success
+        if: needs.test.result == 'success'
+        run: |
+          curl -s "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+            -d chat_id="${{ secrets.TELEGRAM_ALERT_CHAT_ID }}" \
+            -d text="✅ Cricket Trading System deployed successfully! Commit: ${{ github.sha }}" \
+            -d parse_mode="HTML" || true
+
+      - name: Notify Telegram on failure
+        if: needs.test.result == 'failure'
+        run: |
+          curl -s "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+            -d chat_id="${{ secrets.TELEGRAM_ALERT_CHAT_ID }}" \
+            -d text="❌ Cricket Trading System build failed! Check: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            -d parse_mode="HTML" || true

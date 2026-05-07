@@ -35,9 +35,12 @@ WORKDIR /app/frontend
 RUN npm install && npm run build
 
 # ── Backend ────────────────────────────────────────────────────────────────────
+COPY .env /app/.env
 COPY backend /app/backend
+COPY .env /app/backend/.env
 WORKDIR /app/backend
-RUN mkdir -p /app/ml_model/artifacts
+RUN mkdir -p /app/backend/ml_model/artifacts
+COPY backend/ml_model/artifacts/*.pkl /app/backend/ml_model/artifacts/
 
 # ── Supervisor config (nginx port set dynamically at runtime via start.sh) ─────
 RUN printf '[supervisord]\nnodaemon=true\nlogfile=/dev/null\nlogfile_maxbytes=0\n\n\

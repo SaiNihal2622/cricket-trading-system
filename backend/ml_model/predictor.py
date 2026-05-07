@@ -172,11 +172,17 @@ class CricketMLModel:
     Falls back to statistical heuristic when model file not found.
     """
 
-    def __init__(self, model_path: str = "", scaler_path: str = ""):
+    def __init__(self, model_path: str = None, scaler_path: str = None):
         self.model = None
         self.scaler = None
         self.feature_eng = FeatureEngineering()
         self._model_loaded = False
+        
+        base_dir = os.path.dirname(__file__)
+        if not model_path:
+            model_path = os.path.join(base_dir, "artifacts", "xgboost_model.pkl")
+        if not scaler_path:
+            scaler_path = os.path.join(base_dir, "artifacts", "scaler.pkl")
 
         if model_path and os.path.exists(model_path):
             self._load_model(model_path, scaler_path)

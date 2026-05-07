@@ -30,6 +30,7 @@ from strategy_engine.decision_engine import DecisionEngine, MatchContext
 from strategy_engine.loss_cut_engine import LossCutEngine
 from strategy_engine.bookset_engine import BooksetEngine
 from ml_model.predictor import CricketMLModel
+from ml_model.ensemble_predictor import EnsemblePredictor
 from data_ingestion.historical_data import HistoricalDataEngine
 
 logger = logging.getLogger(__name__)
@@ -51,7 +52,7 @@ class TradingAgent:
     - autopilot=False: proposes bets, waits 30s for user approval via dashboard
     """
 
-    def __init__(self, settings=None, rb_instance=None):
+    def __init__(self, settings=None, exchange_instance=None):
         from config.settings import settings as default_settings
         self.settings = settings or default_settings
 
@@ -66,10 +67,10 @@ class TradingAgent:
         )
         self.exchange = create_exchange(
             getattr(self.settings, 'EXCHANGE_TYPE', 'simulated'),
-            rb_instance    = rb_instance,
+            exchange_instance = exchange_instance,
             initial_balance = getattr(self.settings, 'INITIAL_BANKROLL', 10000.0),
         )
-        self._rb_instance = rb_instance   # direct reference for stop loss / sessions
+        self._exchange_instance = exchange_instance   # direct reference for stop loss / sessions
 
         self.decision_engine  = DecisionEngine()
         self.loss_cut_engine  = LossCutEngine()
@@ -78,10 +79,16 @@ class TradingAgent:
         self.value_strategy    = ValueStrategyEngine()
         self.historical_db     = HistoricalDataEngine()
         self.ml_model          = CricketMLModel()
+        self.ensemble_predictor = EnsemblePredictor()
         self.ai_reasoner      = AIReasoner(
             api_key = getattr(self.settings, 'GROQ_API_KEY', ''),
             model   = getattr(self.settings, 'GROQ_MODEL', 'llama-3.3-70b-versatile'),
         )
+        try:
+            from agent.strategy_engine.arbitrage_engine import ArbitrageEngine
+            self.arbitrage_engine = ArbitrageEngine(getattr(self.settings, 'BETFAIR_API_KEY', ''))
+        except ImportError:
+            self.arbitrage_engine = None
 
         # Mode
         self._autopilot = getattr(self.settings, 'AGENT_AUTOPILOT', True)
@@ -207,6 +214,20 @@ class TradingAgent:
             elif not position:
                 # Also check value/high-odds strategy when rule engine says HOLD
                 await self._evaluate_value_opportunity(match_id, match_data)
+                
+            # Arbitrage check against global sharp sources
+            if getattr(self, 'arbitrage_engine', None):
+                sharp_odds = await self.arbitrage_engine.get_sharp_odds("A", "B")
+                if sharp_odds:
+                    arb = self.arbitrage_engine.analyze_arbitrage({"A": match_data["odds_a"]}, sharp_odds)
+                    if arb:
+                        self._log_action("ARBITRAGE_FOUND", arb)
+                        try:
+                            from telegram_bot.notifier import send_signal
+                            msg = f"🚨 **ARBITRAGE DETECTED** 🚨\\n\\n**Delta:** {arb['delta']} | **Confidence**: 100%\\n**RoyalBook:** {arb['royalbook_odds']} vs **Sharp Market:** {arb['sharp_odds']}\\n**Strategy:** {arb['strategy']}"
+                            asyncio.create_task(send_signal(msg))
+                        except Exception:
+                            pass
 
             # Anti-panic check on existing positions
             if position:
@@ -256,12 +277,18 @@ class TradingAgent:
             redis = await get_redis()
             cache = RedisCache(redis)
 
-            state    = await cache.get_match_state(1) or {}
-            odds     = await cache.get_odds(1) or {}
-            telegram = await cache.get_telegram_signals(1) or []
+            # Try multiple match IDs (auto-discovery)
+            match_ids = [1, "1", "current", "live"]
+            state = {}
+            for mid in match_ids:
+                state = await cache.get_match_state(mid) or {}
+                if state: break
+            
+            odds = await cache.get_odds(state.get("match_id", 1)) or {}
+            telegram = await cache.get_telegram_signals(state.get("match_id", 1)) or []
 
             # Also try to enrich with real live data from Cricbuzz
-            if not state or state.get("source") == "mock":
+            if not state or state.get("source") == "mock" or not state.get("team_a"):
                 try:
                     from data_ingestion.cricket_stats import cricket_stats
                     live = await cricket_stats.get_live_score_cricbuzz()
@@ -401,9 +428,9 @@ class TradingAgent:
         except Exception:
             hedge_amount = position.total_exposure * 0.8  # fallback: hedge 80%
 
-        # Execute via RoyalBook if available, else simulated
-        if self._rb_instance:
-            result = await self._rb_instance.place_stop_loss(hedge_team, hedge_amount)
+        # Execute via direct API if available, else simulated
+        if self._exchange_instance:
+            result = await self._exchange_instance.place_bet(match_id, "BACK", hedge_amount, hedge_odds)
         else:
             result = await self.exchange.place_back(match_id, hedge_team, hedge_odds, hedge_amount)
 
@@ -432,20 +459,27 @@ class TradingAgent:
     # ── Analyze ─────────────────────────────────────────────────────────────
 
     async def _analyze(self, match_id, data, position) -> Optional[object]:
-        """Run decision engine + optional AI override."""
+        """
+        Sniper v3 Analysis Pipeline:
+        1. Rule Engine (Direction)
+        2. Heterogeneous Consensus (Verification)
+        3. Threshold Gates (Materiality/Edge)
+        4. Signal Grading (S/A/B)
+        """
         state  = data["state"]
         odds_a = data["odds_a"]
         odds_b = data["odds_b"]
-
+        
+        # Use ensemble predictor for higher accuracy
+        ensemble_pred = self.ensemble_predictor.predict(state)
         ml_pred = self.ml_model.predict(state)
-
-        if position:
-            entry_odds  = position.entry_odds
-            backed_team = "A" if position.backed_team == state.get("team_a") else "B"
-        else:
-            entry_odds  = odds_a
-            backed_team = "A"
-
+        
+        # Override ML prediction with ensemble for better accuracy
+        ml_pred.win_probability = ensemble_pred.win_probability
+        ml_pred.momentum_score = ensemble_pred.momentum_score
+        ml_pred.confidence = ensemble_pred.confidence
+        
+        # 1. Direction (Rule Engine)
         ctx = MatchContext(
             match_id         = int(match_id) if str(match_id).isdigit() else 1,
             team_a           = state.get("team_a", "Team A"),
@@ -460,61 +494,48 @@ class TradingAgent:
             team_a_odds      = odds_a,
             team_b_odds      = odds_b,
             stake            = self.risk_manager.max_stake_per_trade,
-            entry_odds       = entry_odds,
-            backed_team      = backed_team,
+            entry_odds       = position.entry_odds if position else odds_a,
+            backed_team      = ("A" if position.backed_team == state.get("team_a") else "B") if position else "A",
             win_probability  = ml_pred.win_probability,
             momentum_score   = ml_pred.momentum_score,
             is_wicket_just_fell = state.get("last_ball") == "W",
             telegram_signals = data.get("telegram_signals", []),
         )
-
         decision = self.decision_engine.evaluate(ctx)
 
-        # AI Reasoner for borderline/conflicting/critical moments
-        telegram_signals = data.get("telegram_signals", [])
-        is_borderline    = 0.40 <= decision.confidence <= 0.60
-        is_conflicting   = (
-            ml_pred.win_probability > 0.6
-            and any(s.get("sentiment", 0) < -0.3 for s in telegram_signals)
-        ) or (
-            ml_pred.win_probability < 0.4
-            and any(s.get("sentiment", 0) > 0.3 for s in telegram_signals)
-        )
-        is_critical = (
-            float(state.get("overs", 0)) >= 15
-            or (state.get("last_ball") == "W" and int(state.get("total_wickets", 0)) >= 5)
-        )
+        # 2. Consensus Verification (Fail-fast)
+        if decision.signal == "ENTER" and self.ai_reasoner.is_available:
+            ai_result = await self.ai_reasoner.get_heterogeneous_consensus(
+                match_state=state,
+                odds={"team_a_odds": odds_a, "team_b_odds": odds_b},
+                ml_prediction={"win_probability": ml_pred.win_probability, "momentum_score": ml_pred.momentum_score},
+                decision_engine_output=decision.to_dict(),
+                position=position.to_dict() if position else None,
+                telegram_signals=data.get("telegram_signals", []),
+            )
+            
+            if ai_result["action"] != "ENTER":
+                self._log_action("SNIPER_REJECTED", {"reason": "No consensus", "votes": ai_result.get("reasoning")})
+                decision.signal = "HOLD"
+                return decision
 
-        if self.ai_reasoner.is_available and (is_borderline or is_conflicting or is_critical):
-            try:
-                ai_result = await self.ai_reasoner.reason(
-                    match_state       = state,
-                    odds              = {"team_a_odds": odds_a, "team_b_odds": odds_b},
-                    ml_prediction     = {
-                        "win_probability": ml_pred.win_probability,
-                        "momentum_score":  ml_pred.momentum_score,
-                        "model_version":   ml_pred.model_version,
-                    },
-                    decision_engine_output = decision.to_dict(),
-                    position          = position.to_dict() if position else None,
-                    telegram_signals  = telegram_signals,
-                )
-                ai_action = ai_result.get("action", "HOLD")
-                ai_conf   = ai_result.get("confidence", 0)
-
-                if ai_conf > decision.confidence and ai_action != decision.signal:
-                    self._log_action("AI_OVERRIDE", {
-                        "from": decision.signal, "to": ai_action,
-                        "reasoning": ai_result.get("reasoning", ""),
-                    })
-                    decision.signal    = ai_action
-                    decision.confidence = ai_conf
-                    decision.reasoning = f"🧠 {ai_result.get('reasoning', '')}"
-                    if ai_result.get("team"):
-                        decision.entry_team = ai_result["team"]
-            except Exception as e:
-                logger.warning(f"AI Reasoner: {e}")
-
+            # 3. Threshold Gates (Materiality & Edge)
+            materiality = ai_result["confidence"]
+            edge = abs(ml_pred.win_probability - (1/odds_a if ai_result["team"] == state.get("team_a") else 1/odds_b))
+            
+            if materiality < self.settings.CONSENSUS_THRESHOLD / 100.0:
+                self._log_action("SNIPER_REJECTED", {"reason": "Low materiality", "value": materiality})
+                decision.signal = "HOLD"
+                return decision
+                
+            # 4. Signal Grading
+            grade = "B"
+            if materiality >= 0.90 and edge >= 0.15: grade = "S"
+            elif materiality >= 0.85 and edge >= 0.10: grade = "A"
+            
+            decision.grade = grade
+            decision.reasoning = f"[{grade}-Tier] Consensus Verified. Edge: {edge:.2f}. {ai_result['reasoning']}"
+            
         return decision
 
     # ── Value Strategy ───────────────────────────────────────────────────────
@@ -538,15 +559,50 @@ class TradingAgent:
             odds_a   = odds_a,
             odds_b   = odds_b,
             position = None,
-            bankroll = self.risk_manager.bankroll,
+            bankroll = self.risk_manager.current_bankroll,
             historical = self.historical_db,
         )
 
         if not opp:
             return
 
-        stake = round(self.risk_manager.bankroll * opp.stake_pct / 10) * 10
-        stake = max(50.0, min(stake, self.risk_manager.max_stake_per_trade))
+        strict_consensus = getattr(self.settings, 'STRICT_CONSENSUS', True)
+        consensus_threshold = getattr(self.settings, 'CONSENSUS_THRESHOLD', 80)
+        
+        if strict_consensus and self.ai_reasoner.is_available:
+            try:
+                ai_result = await self.ai_reasoner.multi_pass_reason(
+                    match_state = state,
+                    odds = {"team_a_odds": odds_a, "team_b_odds": odds_b},
+                    ml_prediction = {"win_probability": 0.5, "momentum_score": 0.5, "model_version": "value"},
+                    decision_engine_output = {"signal": "ENTER", "confidence": opp.confidence, "reasoning": opp.reasoning},
+                    position = None,
+                    telegram_signals = data.get("telegram_signals", [])
+                )
+                ai_conf = ai_result.get("confidence", 0)
+                ai_action = ai_result.get("action", "HOLD")
+                threshold = consensus_threshold / 100.0
+                
+                if ai_action == "HOLD" or ai_conf < threshold:
+                    self._log_action("REJECTED_BY_CONSENSUS", {
+                        "original_signal": "VALUE_ENTER",
+                        "ai_confidence": f"{ai_conf*100:.0f}%",
+                        "reasoning": ai_result.get("reasoning", "")
+                    })
+                    return
+                else:
+                    opp.confidence = ai_conf
+                    opp.reasoning = f"✅ Consensus Approved. {ai_result.get('reasoning', '')}"
+            except Exception as e:
+                logger.warning(f"Value AI Reasoner: {e}")
+
+        # Aggressive staking for small budgets (< ₹2000)
+        if self.risk_manager.current_bankroll < 2000:
+            stake = round(self.risk_manager.current_bankroll * 0.25 / 10) * 10 # 25% stake
+        else:
+            stake = round(self.risk_manager.current_bankroll * opp.stake_pct / 10) * 10
+        
+        stake = max(100.0, min(stake, self.risk_manager.max_stake_per_trade))
 
         proposal = {
             "type":        "VALUE_" + opp.action,
@@ -564,10 +620,10 @@ class TradingAgent:
         }
 
         if opp.is_lay:
-            # Lay bet: use RoyalBook lay or simulated
+            # Lay bet: use direct API lay or simulated
             async def _execute_lay(p):
-                if self._rb_instance:
-                    res = await self._rb_instance.place_lay_bet(p["team"], p["stake"])
+                if self._exchange_instance:
+                    res = await self._exchange_instance.place_bet(p["match_id"], "LAY", p["stake"], p["odds"])
                 else:
                     res = await self.exchange.place_lay(p["match_id"], p["team"], p["odds"], p["stake"])
                 success = res.get("success", False) if isinstance(res, dict) else res.success
@@ -597,7 +653,7 @@ class TradingAgent:
 
         state   = data["state"]
         venue   = data.get("venue", state.get("venue", ""))
-        bankroll = self.risk_manager.bankroll
+        bankroll = self.risk_manager.current_bankroll
 
         try:
             best = self.session_analyzer.get_best_session_trade(
@@ -612,6 +668,37 @@ class TradingAgent:
 
         if not best or best["confidence"] < 0.55:
             return
+
+        strict_consensus = getattr(self.settings, 'STRICT_CONSENSUS', True)
+        consensus_threshold = getattr(self.settings, 'CONSENSUS_THRESHOLD', 80)
+        
+        if strict_consensus and self.ai_reasoner.is_available:
+            try:
+                ai_result = await self.ai_reasoner.multi_pass_reason(
+                    match_state = state,
+                    odds = {"team_a_odds": data["odds_a"], "team_b_odds": data["odds_b"]},
+                    ml_prediction = {"win_probability": 0.5, "momentum_score": 0.5, "model_version": "session"},
+                    decision_engine_output = {"signal": "SESSION", "confidence": best["confidence"], "reasoning": best["reasoning"]},
+                    position = None,
+                    telegram_signals = data.get("telegram_signals", [])
+                )
+                ai_conf = ai_result.get("confidence", 0)
+                ai_action = ai_result.get("action", "HOLD")
+                threshold = consensus_threshold / 100.0
+                
+                if ai_action == "HOLD" or ai_conf < threshold:
+                    self._log_action("REJECTED_BY_CONSENSUS", {
+                        "original_signal": "SESSION",
+                        "label": best["label"],
+                        "ai_confidence": f"{ai_conf*100:.0f}%",
+                        "reasoning": ai_result.get("reasoning", "")
+                    })
+                    return
+                else:
+                    best["confidence"] = ai_conf
+                    best["reasoning"] = f"✅ Consensus Approved. {ai_result.get('reasoning', '')}"
+            except Exception as e:
+                logger.warning(f"Session AI Reasoner: {e}")
 
         stake = best.get("recommended_stake", 100.0)
         stake = max(50.0, min(stake, self.risk_manager.max_stake_per_trade / 2))
@@ -629,16 +716,16 @@ class TradingAgent:
         await self._route_decision(proposal, self._execute_session_trade)
 
     async def _execute_session_trade(self, proposal: dict):
-        """Execute a session bet via RoyalBook or simulated."""
+        """Execute a session bet via Stake API or simulated."""
         label  = proposal["label"]
         side   = proposal["side"]
         stake  = proposal["stake"]
         match_id = proposal["match_id"]
 
-        if self._rb_instance:
-            result = await self._rb_instance.place_session_bet(label, side, stake)
-            success = result.get("success", False)
-            msg     = result.get("message", "")
+        if self._exchange_instance:
+            result = await self._exchange_instance.place_bet(match_id, f"SESSION:{label}:{side}", stake, 1.85)
+            success = result if isinstance(result, bool) else result.get("success", False)
+            msg     = "Stake API Bet Placed" if success else "Failed to place bet"
         else:
             # Simulate session bet
             sim_result = await self.exchange.place_back(match_id, f"SESSION:{label}", 1.85, stake)
