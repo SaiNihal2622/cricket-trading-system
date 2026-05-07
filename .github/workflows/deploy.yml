@@ -15,14 +15,6 @@ on:
         options:
           - demo
           - live
-      environment:
-        description: 'Target environment'
-        required: true
-        default: 'staging'
-        type: choice
-        options:
-          - staging
-          - production
 
 env:
   REGISTRY: ghcr.io
@@ -124,49 +116,59 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # ─── Deploy to Railway ─────────────────────────────────────────────────────
-  deploy-railway:
-    needs: build
+  # ─── Build & Deploy Frontend to GitHub Pages ───────────────────────────────
+  deploy-pages:
+    needs: test
     runs-on: ubuntu-latest
     if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && github.event_name == 'push'
-    environment: production
+    
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install Railway CLI
-        run: npm install -g @railway/cli
-
-      - name: Deploy to Railway
-        run: railway up --service cricket-trading
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-
-  # ─── Deploy to VPS (SSH) ───────────────────────────────────────────────────
-  deploy-vps:
-    needs: test
-    runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production'
-    environment: production
-
-    steps:
-      - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USERNAME }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          script: |
-            cd /opt/cricket-trading
-            git pull origin main
-            docker compose pull
-            docker compose up -d --remove-orphans
-            docker compose logs --tail=20
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+        env:
+          REACT_APP_API_URL: ${{ vars.API_URL || 'https://api.cricket-trading.example.com' }}
+          REACT_APP_WS_URL: ${{ vars.WS_URL || 'wss://ws.cricket-trading.example.com' }}
+          REACT_APP_DEMO_MODE: 'true'
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: frontend/build
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
 
   # ─── Notify ────────────────────────────────────────────────────────────────
   notify:
-    needs: [test, build]
+    needs: [test, build, deploy-pages]
     runs-on: ubuntu-latest
     if: always()
 
@@ -176,7 +178,7 @@ jobs:
         run: |
           curl -s "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
             -d chat_id="${{ secrets.TELEGRAM_ALERT_CHAT_ID }}" \
-            -d text="✅ Cricket Trading System deployed successfully! Commit: ${{ github.sha }}" \
+            -d text="✅ Cricket Trading System deployed successfully! Dashboard: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/ Commit: ${{ github.sha }}" \
             -d parse_mode="HTML" || true
 
       - name: Notify Telegram on failure
