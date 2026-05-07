@@ -1,6 +1,7 @@
 # Environment
-# .env (removed so Railway uploads it)
+.env
 .env.local
+.env.production
 
 # Python
 __pycache__/
@@ -32,6 +33,20 @@ redis_data/
 .vscode/
 *.swp
 *.swo
+
+# Session / Auth
+.new_session
+tg_auth_state.json
+polycool_session.session
+session_b64.txt
+
+# Databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Claude worktrees
+.claude/
 
 # OS
 .DS_Store

@@ -2,6 +2,7 @@
   "name": "cricket-trading-intelligence",
   "version": "1.0.0",
   "private": true,
+  "homepage": "https://sainihal2622.github.io/cricket-trading-system",
   "dependencies": {
     "react": "^18.3.1",
     "react-dom": "^18.3.1",

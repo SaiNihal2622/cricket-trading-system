@@ -14,6 +14,8 @@ import StrategyCalculator from './components/StrategyCalculator';
 import OddsChart from './components/OddsChart';
 import AgentPanel from './components/AgentPanel';
 import TradeApproval from './components/TradeApproval';
+import AIInsightsPanel from './components/AIInsightsPanel';
+import TradeFeed from './components/TradeFeed';
 
 const API = process.env.REACT_APP_API_URL || '';
 
@@ -23,6 +25,22 @@ export default function App() {
 
   const [autopilot, setAutopilot]   = useState(true);
   const [modeLoading, setModeLoading] = useState(false);
+  const [demoMode, setDemoMode] = useState(true);
+  const [systemHealth, setSystemHealth] = useState({ cpu: 23, mem: 41, latency: 45, uptime: '2h 34m' });
+
+  // Simulate system health metrics
+  useEffect(() => {
+    if (!demoMode) return;
+    const interval = setInterval(() => {
+      setSystemHealth(prev => ({
+        cpu: Math.max(5, Math.min(95, prev.cpu + (Math.random() - 0.5) * 10)),
+        mem: Math.max(20, Math.min(85, prev.mem + (Math.random() - 0.5) * 5)),
+        latency: Math.max(10, Math.min(200, prev.latency + (Math.random() - 0.5) * 20)),
+        uptime: prev.uptime,
+      }));
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [demoMode]);
 
   // Poll for signal + ML every 15s
   const refreshSignal = useCallback(async () => {
@@ -84,6 +102,22 @@ export default function App() {
             Each trade will need your approval within 30s
           </span>
         )}
+
+        {/* Demo mode badge */}
+        {demoMode && (
+          <div style={styles.demoBadge}>
+            <span style={styles.demoDot} className="live-pulse" />
+            <span>DEMO MODE — 80%+ ACCURACY TARGET</span>
+          </div>
+        )}
+
+        {/* System health mini-bar */}
+        <div style={styles.healthBar}>
+          <HealthChip label="CPU" value={`${systemHealth.cpu.toFixed(0)}%`} color={systemHealth.cpu > 80 ? 'var(--red)' : 'var(--green)'} />
+          <HealthChip label="MEM" value={`${systemHealth.mem.toFixed(0)}%`} color={systemHealth.mem > 70 ? 'var(--amber)' : 'var(--green)'} />
+          <HealthChip label="PING" value={`${systemHealth.latency.toFixed(0)}ms`} color={systemHealth.latency > 150 ? 'var(--red)' : 'var(--cyan)'} />
+          <HealthChip label="UP" value={systemHealth.uptime} color="var(--text-secondary)" />
+        </div>
       </div>
 
       <div style={styles.body}>
@@ -97,13 +131,15 @@ export default function App() {
         {/* Center column */}
         <div style={{ ...styles.col, flex: '1 1 480px' }}>
           <SignalPanel />
+          <AIInsightsPanel />
           <OddsChart />
           <PnLChart />
         </div>
 
         {/* Right column */}
-        <div style={{ ...styles.col, flex: '0 0 340px' }}>
+        <div style={{ ...styles.col, flex: '0 0 360px' }}>
           <AgentPanel />
+          <TradeFeed />
           <TelegramFeed />
         </div>
       </div>
@@ -113,6 +149,21 @@ export default function App() {
     </div>
   );
 }
+
+function HealthChip({ label, value, color }) {
+  return (
+    <div style={healthStyles.chip}>
+      <span style={healthStyles.label}>{label}</span>
+      <span style={{ ...healthStyles.value, color }}>{value}</span>
+    </div>
+  );
+}
+
+const healthStyles = {
+  chip: { display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 36 },
+  label: { fontSize: 7, color: 'var(--text-dim)', letterSpacing: 1 },
+  value: { fontSize: 10, fontWeight: 700, fontFamily: 'var(--font-mono)' },
+};
 
 const styles = {
   root: {
@@ -149,6 +200,33 @@ const styles = {
     fontSize: 10,
     color: '#3b82f6',
     fontStyle: 'italic',
+  },
+  demoBadge: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 5,
+    marginLeft: 'auto',
+    padding: '2px 10px',
+    background: 'rgba(124,77,255,0.15)',
+    border: '1px solid rgba(124,77,255,0.3)',
+    borderRadius: 4,
+    fontSize: 9,
+    color: 'var(--purple)',
+    fontWeight: 700,
+    letterSpacing: 1,
+  },
+  demoDot: {
+    width: 6,
+    height: 6,
+    borderRadius: '50%',
+    background: 'var(--purple)',
+    display: 'inline-block',
+  },
+  healthBar: {
+    display: 'flex',
+    gap: 10,
+    marginLeft: 12,
+    alignItems: 'center',
   },
   body: {
     display: 'flex',
