@@ -14,13 +14,18 @@ if _db_url.startswith("postgresql://") or _db_url.startswith("postgres://"):
     _db_url = _db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
     _db_url = _db_url.replace("postgres://", "postgresql+asyncpg://", 1)
 
-engine = create_async_engine(
-    _db_url,
-    pool_size=settings.DATABASE_POOL_SIZE,
-    max_overflow=settings.DATABASE_MAX_OVERFLOW,
-    pool_pre_ping=True,
-    echo=settings.DEBUG,
-)
+engine_kwargs = {
+    "echo": settings.DEBUG,
+}
+
+if _db_url.startswith("postgresql"):
+    engine_kwargs.update({
+        "pool_size": settings.DATABASE_POOL_SIZE,
+        "max_overflow": settings.DATABASE_MAX_OVERFLOW,
+        "pool_pre_ping": True,
+    })
+
+engine = create_async_engine(_db_url, **engine_kwargs)
 
 AsyncSessionLocal = async_sessionmaker(
     engine,

@@ -42,6 +42,7 @@ class MatchState:
         self.powerplay_runs: int = 0
         self.last_ball: str = ""
         self.status: str = "live"
+        self.weather: dict = {}
         self.timestamp: str = datetime.utcnow().isoformat()
 
     def to_dict(self) -> dict:
@@ -96,15 +97,17 @@ class CricbuzzScraper:
                     team_names = [el.get_text(strip=True) for el in teams_el]
 
                     status_el = card.select_one("div.cb-text-live")
-                    is_live = status_el is not None
+                    status_text = status_el.get_text(strip=True) if status_el else "live"
+                    is_live = "live" in status_text.lower() or "delayed" in status_text.lower() or "toss" in status_text.lower()
 
-                    if match_id and len(team_names) >= 2 and is_live:
+                    if match_id and len(team_names) >= 2:
                         matches.append({
                             "id": match_id,
                             "team_a": team_names[0] if team_names else "",
                             "team_b": team_names[1] if len(team_names) > 1 else "",
                             "url": f"{self.BASE_URL}{href}",
-                            "is_live": is_live
+                            "is_live": is_live,
+                            "status": status_text
                         })
                 except Exception as e:
                     logger.warning(f"Error parsing match card: {e}")
@@ -158,6 +161,11 @@ class CricbuzzScraper:
                 bowler_name_el = bowler_rows[-1].select_one("a")
                 if bowler_name_el:
                     state.current_bowler = bowler_name_el.get_text(strip=True)
+
+            # Status (Rain Delay / Toss / Results)
+            status_el = soup.select_one("div.cb-text-live") or soup.select_one("div.cb-text-complete")
+            if status_el:
+                state.status = status_el.get_text(strip=True).lower()
 
             state.timestamp = datetime.utcnow().isoformat()
             return state
@@ -284,6 +292,12 @@ class LiveFeedManager:
                 logger.info("No CricAPI key — using mock feed")
         except ImportError:
             logger.info("CricAPI client not available — using mock feed")
+            
+        try:
+            from data_ingestion.weather_manager import WeatherManager
+            self.weather_mgr = WeatherManager(getattr(settings, "WEATHER_API_KEY", ""))
+        except ImportError:
+            self.weather_mgr = None
 
     async def start(self):
         self._running = True
@@ -354,6 +368,10 @@ class LiveFeedManager:
 
             self._active_matches[state.match_id] = state
             self._data_source = "cricbuzz_live"
+
+            # Fetch weather
+            if getattr(self, 'weather_mgr', None):
+                state.weather = await self.weather_mgr.get_stadium_weather(state.get("venue", ""))
 
             redis = await get_redis()
             cache = RedisCache(redis)

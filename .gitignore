@@ -1,5 +1,5 @@
 # Environment
-.env
+# .env (removed so Railway uploads it)
 .env.local
 
 # Python
@@ -16,8 +16,8 @@ frontend/build/
 frontend/.env
 
 # ML artifacts
-ml_model/artifacts/*.pkl
-ml_model/artifacts/*.joblib
+# ml_model/artifacts/*.pkl
+# ml_model/artifacts/*.joblib
 
 # Data
 data/

@@ -34,14 +34,15 @@ class RiskManager:
 
     def __init__(
         self,
-        initial_bankroll: float = 10000.0,
-        max_stake_per_trade: float = 1000.0,
-        max_exposure: float = 5000.0,
-        max_daily_loss: float = 2000.0,
+        initial_bankroll: float = 1200.0,
+        max_stake_per_trade: float = 1200.0,
+        max_exposure: float = 1200.0,
+        max_daily_loss: float = 1200.0,
         max_consecutive_losses: int = 5,
-        max_drawdown_pct: float = 30.0,
-        kelly_fraction: float = 0.25,  # quarter-Kelly for safety
+        max_drawdown_pct: float = 100.0, # allow full budget draw
+        kelly_fraction: float = 0.50, 
     ):
+        self.daily_profit_target = 3000.0
         self.initial_bankroll = initial_bankroll
         self.current_bankroll = initial_bankroll
         self.max_stake_per_trade = max_stake_per_trade
@@ -123,6 +124,12 @@ class RiskManager:
             self._trigger_circuit_breaker("Daily loss limit exceeded")
             return self._result(False, 0, rejections, warnings)
 
+        # 6.5 Daily profit target
+        if hasattr(self, 'daily_profit_target') and self.daily_pnl >= self.daily_profit_target:
+            rejections.append(f"Daily profit target hit: ₹{self.daily_pnl:.0f}!")
+            self._trigger_circuit_breaker("Victory! Daily profit target achieved.")
+            return self._result(False, 0, rejections, warnings)
+
         # 7. Drawdown protection
         drawdown_pct = ((self.peak_bankroll - self.current_bankroll) / self.peak_bankroll) * 100
         if drawdown_pct >= self.max_drawdown_pct:
@@ -135,16 +142,25 @@ class RiskManager:
             rejections.append(f"Confidence too low: {confidence:.0%}")
             return self._result(False, 0, rejections, warnings)
 
-        # 9. Kelly criterion sizing
-        kelly_stake = self._kelly_size(win_probability, odds)
-        if kelly_stake < adjusted_stake:
-            adjusted_stake = kelly_stake
-            warnings.append(f"Kelly-sized to ₹{adjusted_stake:.0f}")
+        # 9. Kelly criterion sizing or Fixed % for small accounts
+        if self.current_bankroll < 2000:
+            # Small account aggressive mode (20% fixed stake per quality signal)
+            sizing_stake = self.current_bankroll * 0.20
+        else:
+            sizing_stake = self._kelly_size(win_probability, odds)
 
-        # 10. Minimum viable stake
-        if adjusted_stake < 50:
-            rejections.append(f"Stake too small after adjustments: ₹{adjusted_stake:.0f}")
-            return self._result(False, 0, rejections, warnings)
+        if sizing_stake < adjusted_stake:
+            adjusted_stake = sizing_stake
+            warnings.append(f"Adjusted for bankroll to ₹{adjusted_stake:.0f}")
+
+        # 10. Minimum viable stake — increased for visibility
+        if adjusted_stake < 100:
+            if self.current_bankroll >= 150:
+                adjusted_stake = 100.0
+                warnings.append("Stake boosted to ₹100 min")
+            else:
+                rejections.append(f"Stake too small: ₹{adjusted_stake:.0f}")
+                return self._result(False, 0, rejections, warnings)
 
         return self._result(True, round(adjusted_stake, 2), rejections, warnings)
 

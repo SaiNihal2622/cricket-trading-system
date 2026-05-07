@@ -17,6 +17,7 @@ from database.redis_client import init_redis, close_redis
 from data_ingestion.live_feed import LiveFeedManager
 from data_ingestion.odds_scraper import OddsScraper
 from telegram_bot.bot import TelegramBot
+from telegram_bot.chatbot import InteractiveChatbot
 from config.settings import settings
 
 logging.basicConfig(
@@ -29,13 +30,14 @@ logger = logging.getLogger(__name__)
 live_feed_manager: LiveFeedManager = None
 odds_scraper: OddsScraper = None
 telegram_bot: TelegramBot = None
+interactive_chatbot: InteractiveChatbot = None
 trading_agent = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan manager"""
-    global live_feed_manager, odds_scraper, telegram_bot, trading_agent
+    global live_feed_manager, odds_scraper, telegram_bot, interactive_chatbot, trading_agent
 
     logger.info("🏏 Starting Cricket Trading Intelligence System...")
 
@@ -52,58 +54,70 @@ async def lifespan(app: FastAPI):
     # Start odds scraper
     odds_scraper = OddsScraper()
 
-    # ── RoyalBook live integration ──────────────────────────────────────────
-    rb_instance = None
-    if settings.EXCHANGE_TYPE == "royalbook" and settings.ROYALBOOK_USERNAME:
-        from exchange.royalbook import RoyalBookExchange
-        rb_instance = RoyalBookExchange(
-            settings.ROYALBOOK_USERNAME,
-            settings.ROYALBOOK_PASSWORD,
-            headless=settings.ROYALBOOK_HEADLESS,
+    # ── Stake API integration ──────────────────────────────────────────────
+    exchange_instance = None
+    if settings.EXCHANGE_TYPE == "stake" and settings.STAKE_API_KEY:
+        from exchange.stake_exchange import StakeExchange
+        exchange_instance = StakeExchange(
+            settings.STAKE_API_KEY,
+            settings.STAKE_GRAPHQL_URL
         )
-        await rb_instance.start()
-        odds_scraper.attach_royalbook(rb_instance)
-        if settings.ROYALBOOK_AUTO_NAVIGATE:
-            matches = await rb_instance.get_live_cricket_matches()
-            if matches:
-                await rb_instance.navigate_to_match(matches[0]["url"])
-                logger.info(f"✅ RoyalBook navigated → {matches[0]['title']}")
-            else:
-                logger.warning("RoyalBook: no live matches found, will retry each cycle")
-        app.state.royalbook = rb_instance
-        logger.info("✅ RoyalBook exchange started")
+
+        async def _init_exchange():
+            try:
+                await exchange_instance.start()
+                odds_scraper.attach_exchange(exchange_instance)
+                logger.info("✅ Stake exchange API started in background")
+            except Exception as e:
+                logger.error(f"❌ Failed to start Stake API: {e}")
+
+        asyncio.create_task(_init_exchange())
+        app.state.exchange = exchange_instance
 
     asyncio.create_task(odds_scraper.start())
-    logger.info(f"✅ Odds scraper started (source: {'royalbook_live' if rb_instance else 'mock'})")
+    logger.info(f"✅ Odds scraper started (source: {'stake_api' if exchange_instance else 'mock'})")
 
     # Start Telegram bot
     if settings.TELEGRAM_ENABLED:
+        logger.info("Initializing Telegram Signal Listener...")
         telegram_bot = TelegramBot()
         asyncio.create_task(telegram_bot.start())
-        logger.info("✅ Telegram bot started")
+    else:
+        logger.info("Telegram Signal Listener is disabled.")
 
     # Start autonomous trading agent
     if settings.AGENT_ENABLED:
+        logger.info(f"Starting Trading Agent in {settings.AGENT_MODE} mode...")
         from agent.trading_agent import TradingAgent
-        trading_agent = TradingAgent(settings, rb_instance=rb_instance)
-        await trading_agent.start()
-        logger.info(f"✅ Trading agent started (mode: {settings.AGENT_MODE})")
+        trading_agent = TradingAgent(settings, exchange_instance=exchange_instance)
+        asyncio.create_task(trading_agent.start())
+    else:
+        logger.info("Trading Agent is disabled.")
+
+    # Start Interactive Chatbot
+    if settings.TELEGRAM_ENABLED and settings.TELEGRAM_BOT_TOKEN:
+        logger.info("Initializing Interactive Telegram Chatbot...")
+        interactive_chatbot = InteractiveChatbot(agent=trading_agent)
+        asyncio.create_task(interactive_chatbot.start())
+    else:
+        logger.info("Interactive Chatbot is disabled (no BOT_TOKEN).")
 
     app.state.live_feed = live_feed_manager
     app.state.odds_scraper = odds_scraper
     app.state.telegram_bot = telegram_bot
+    app.state.interactive_chatbot = interactive_chatbot
     app.state.trading_agent = trading_agent
 
     # ── Startup ping on Telegram ──────────────────────────────────────────────
     try:
         from telegram_bot.notifier import send_info
-        rb_status = "✅ RoyalBook connected" if rb_instance else "⚠️ RoyalBook offline"
+        exchange_status = "✅ Stake API connected" if exchange_instance else "⚠️ Stake API offline"
         asyncio.create_task(send_info(
             f"🏏 Bot restarted — watching for IPL matches\n"
-            f"{rb_status} | Mode: {settings.AGENT_MODE.upper()}\n"
+            f"{exchange_status} | Mode: {settings.AGENT_MODE.upper()}\n"
             f"Bankroll: ₹{getattr(settings, 'INITIAL_BANKROLL', '?')} | "
             f"Max stake: ₹{getattr(settings, 'MAX_STAKE_PER_TRADE', '?')}\n"
-            f"Signals will arrive here. Place bets manually on RoyalBook."
+            f"Signals will arrive here. Agent will bet via Stake API."
         ))
     except Exception:
         pass
@@ -116,13 +130,15 @@ async def lifespan(app: FastAPI):
         await trading_agent.stop()
     if odds_scraper:
         await odds_scraper.stop()
-    rb = getattr(app.state, "royalbook", None)
-    if rb:
-        await rb.stop()
+    exchange = getattr(app.state, "exchange", None)
+    if exchange:
+        await exchange.stop()
     if live_feed_manager:
         await live_feed_manager.stop()
     if telegram_bot:
         await telegram_bot.stop()
+    if interactive_chatbot:
+        await interactive_chatbot.stop()
     await close_db()
     await close_redis()
 

@@ -20,14 +20,44 @@ WIN_PROB_KEY = "ml:win_prob:{match_id}"
 
 async def init_redis():
     global redis_client
-    redis_client = aioredis.from_url(
-        settings.REDIS_URL,
-        encoding="utf-8",
-        decode_responses=True,
-        max_connections=settings.REDIS_POOL_SIZE,
-    )
-    await redis_client.ping()
-    logger.info("Redis connection established")
+    try:
+        redis_client = aioredis.from_url(
+            settings.REDIS_URL,
+            encoding="utf-8",
+            decode_responses=True,
+            max_connections=settings.REDIS_POOL_SIZE,
+            socket_timeout=2.0,
+            socket_connect_timeout=2.0
+        )
+        await redis_client.ping()
+        logger.info("✅ Redis connection established")
+    except Exception as e:
+        logger.warning(f"⚠️ Redis connection failed ({e}). Switching to In-Memory Mock.")
+        from unittest.mock import AsyncMock
+        mock = AsyncMock()
+        mock.data = {}
+        
+        async def mock_setex(name, time, value): mock.data[name] = value
+        async def mock_get(name): return mock.data.get(name)
+        async def mock_lpush(name, *values): 
+            if name not in mock.data: mock.data[name] = []
+            for v in values: mock.data[name].insert(0, v)
+        async def mock_ltrim(name, start, end): 
+            if name in mock.data: mock.data[name] = mock.data[name][start:end+1]
+        async def mock_lrange(name, start, end): return mock.data.get(name, [])[start:end+1]
+        async def mock_publish(channel, message): pass
+        
+        mock.setex = mock_setex
+        mock.get = mock_get
+        mock.lpush = mock_lpush
+        mock.ltrim = mock_ltrim
+        mock.lrange = mock_lrange
+        mock.publish = mock_publish
+        mock.close = AsyncMock()
+        mock.ping = AsyncMock(return_value=True)
+        
+        redis_client = mock
+        logger.info("🚀 In-Memory Redis Mock active")
 
 
 async def close_redis():

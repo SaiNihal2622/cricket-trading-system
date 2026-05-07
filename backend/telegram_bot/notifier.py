@@ -44,7 +44,26 @@ async def _init_client():
 
 
 async def send_signal(message: str):
-    """Send a message to the user's own Saved Messages (chat with yourself)."""
+    """Send a message to the user's Bot Chat, falling back to Saved Messages."""
+    from config.settings import settings
+    if settings.TELEGRAM_BOT_TOKEN and settings.TELEGRAM_ALERT_CHAT_ID:
+        try:
+            import httpx
+            url = f"https://api.telegram.org/bot{settings.TELEGRAM_BOT_TOKEN}/sendMessage"
+            payload = {
+                "chat_id": settings.TELEGRAM_ALERT_CHAT_ID,
+                "text": message,
+                "parse_mode": "Markdown"
+            }
+            async with httpx.AsyncClient() as client:
+                resp = await client.post(url, json=payload)
+                if resp.status_code == 200:
+                    logger.info(f"Telegram signal sent via Bot: {message[:80]}")
+                    return
+        except Exception as e:
+            logger.error(f"Telegram Bot API send error: {e}")
+            
+    # Fallback to Telethon string session (Saved Messages)
     global _client, _ready
     if not _ready:
         await _init_client()
@@ -53,7 +72,7 @@ async def send_signal(message: str):
         return
     try:
         await _client.send_message("me", message, parse_mode="md")
-        logger.info(f"Telegram signal sent: {message[:80]}")
+        logger.info(f"Telegram signal sent via StringSession: {message[:80]}")
     except Exception as e:
         logger.error(f"Telegram send error: {e}")
         _ready = False  # reset so next call re-inits

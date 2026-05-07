@@ -17,7 +17,9 @@ import pandas as pd
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+ROOT_DIR = os.path.dirname(os.path.dirname(__file__))
+sys.path.insert(0, ROOT_DIR)
+sys.path.insert(0, os.path.join(ROOT_DIR, 'backend'))
 
 
 def prepare_training_data(df: pd.DataFrame) -> tuple:

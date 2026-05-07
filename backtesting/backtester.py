@@ -77,6 +77,12 @@ class IPLDataLoader:
             if old in df.columns and new not in df.columns:
                 df = df.rename(columns={old: new})
 
+        # Parse Cricsheet float `ball` (now renamed to `ball_number`) into `over_number`
+        if "ball_number" in df.columns and "over_number" not in df.columns:
+            temp_balls = df["ball_number"].copy()
+            df["over_number"] = temp_balls.apply(lambda x: int(float(x)))
+            df["ball_number"] = temp_balls.apply(lambda x: round((float(x) % 1) * 10))
+
         # Compute cumulative stats per match/innings
         df = df.sort_values(["match_id", "innings", "over_number", "ball_number"])
 

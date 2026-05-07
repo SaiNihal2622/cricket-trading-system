@@ -40,7 +40,7 @@ set TELEGRAM_CHANNELS=
 
 REM ── Optional: Groq AI (free at console.groq.com) ────────────────────────────
 set GROQ_API_KEY=
-set GROQ_MODEL=llama-3.3-70b-versatile
+set GROQ_MODEL=llama-3.1-8b-instant
 
 REM ── App settings ─────────────────────────────────────────────────────────────
 set DEBUG=false

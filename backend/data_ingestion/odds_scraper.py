@@ -53,9 +53,9 @@ class OddsScraper:
                 logger.error(f"Odds scrape error: {e}")
             await asyncio.sleep(self._loop_interval)
 
-    def attach_royalbook(self, rb):
-        """Attach live RoyalBook exchange for real odds scraping."""
-        self._rb = rb
+    def attach_exchange(self, exchange):
+        """Attach live exchange for real odds scraping."""
+        self._exchange = exchange
 
     async def _fetch_odds(self):
         """Fetch odds — RoyalBook live first, reactive mock as fallback."""
@@ -65,49 +65,24 @@ class OddsScraper:
             cache = RedisCache(redis)
             match_id = 1
 
-            # ── Live path: RoyalBook scraper ──────────────────────────────
-            rb = getattr(self, '_rb', None)
-            # Auto-navigate if no active match yet (match may have gone live after startup)
-            if rb and not rb._active_match_url:
+            # ── Live path: Direct API Scraper ──────────────────────────────
+            exchange = getattr(self, '_exchange', None)
+            if exchange and exchange._logged_in:
                 try:
-                    matches = await rb.get_live_cricket_matches()
-                    if matches:
-                        await rb.navigate_to_match(matches[0]["url"])
-                        title = matches[0].get('title', matches[0]['url'])
-                        logger.info(f"OddsScraper: auto-navigated to {title}")
-                        # Notify user on Telegram
-                        try:
-                            from telegram_bot.notifier import send_info
-                            import asyncio
-                            asyncio.create_task(send_info(
-                                f"Match found on RoyalBook: **{title}** — bot is now live!"
-                            ))
-                        except Exception:
-                            pass
-                except Exception as _nav_err:
-                    logger.debug(f"Auto-navigate attempt failed: {_nav_err}")
-            if rb and rb._active_match_url:
-                try:
-                    raw = await rb.scrape_match_odds()
-                    mo = raw.get("match_odds", {})
-                    teams = list(mo.keys())
-                    if len(teams) >= 2:
-                        a, b = teams[0], teams[1]
-                        from datetime import datetime, timezone
+                    # In a real implementation we would fetch match_id dynamically
+                    raw = await exchange.get_match_odds(str(match_id))
+                    
+                    if raw and "back_a" in raw:
                         odds = {
                             "match_id": match_id,
-                            "team_a": a,
-                            "team_b": b,
-                            "team_a_odds": mo[a]["back"],
-                            "team_b_odds": mo[b]["back"],
-                            "team_a_lay":  mo[a].get("lay"),
-                            "team_b_lay":  mo[b].get("lay"),
-                            "bookmaker":   raw.get("bookmaker", {}),
-                            "sessions":    raw.get("sessions", []),
-                            "implied_prob_a": round(1 / mo[a]["back"] * 100, 2),
-                            "implied_prob_b": round(1 / mo[b]["back"] * 100, 2),
-                            "overround": round(1/mo[a]["back"] + 1/mo[b]["back"], 4),
-                            "source": "royalbook_live",
+                            "team_a": "Team A",
+                            "team_b": "Team B",
+                            "team_a_odds": raw["back_a"],
+                            "team_b_odds": raw["back_b"],
+                            "implied_prob_a": round(1 / raw["back_a"] * 100, 2),
+                            "implied_prob_b": round(1 / raw["back_b"] * 100, 2),
+                            "overround": round(1/raw["back_a"] + 1/raw["back_b"], 4),
+                            "source": "stake_api_live",
                             "timestamp": datetime.now(timezone.utc).isoformat(),
                         }
                         self._current_odds[str(match_id)] = odds
@@ -115,7 +90,7 @@ class OddsScraper:
                         await cache.publish("odds:updates", odds)
                         return
                 except Exception as e:
-                    logger.warning(f"RoyalBook scrape failed, falling back to mock: {e}")
+                    logger.warning(f"Exchange scrape failed, falling back to mock: {e}")
 
             # ── Fallback: reactive mock ───────────────────────────────────
             match_state = await cache.get_match_state(match_id) or {}

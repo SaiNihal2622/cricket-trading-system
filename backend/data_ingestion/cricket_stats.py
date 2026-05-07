@@ -164,25 +164,58 @@ class CricketStatsService:
 
     def _parse_cricbuzz_html(self, html: str) -> list:
         """Extract IPL match cards from Cricbuzz live scores HTML."""
-        from bs4 import BeautifulSoup
+        import re
         matches = []
-        ipl_keywords = ["ipl", "indian premier", "t20"]
+        ipl_keywords = ["ipl", "indian premier league", "tata ipl"]
+
+        # IPL team short names / full names to detect
+        ipl_teams = [
+            "CSK", "MI", "RCB", "KKR", "DC", "SRH", "PBKS", "RR", "LSG", "GT",
+            "Chennai", "Mumbai", "Bangalore", "Kolkata", "Delhi", "Hyderabad",
+            "Punjab", "Rajasthan", "Lucknow", "Gujarat",
+        ]
+
         try:
+            from bs4 import BeautifulSoup
             soup = BeautifulSoup(html, "lxml")
-            for card in soup.select(".cb-mtch-lst, .cb-match-item, [class*='match']"):
-                text = card.get_text(" ", strip=True).lower()
-                if any(k in text for k in ipl_keywords):
-                    teams_els = card.select("[class*='team'], [class*='tname']")
-                    team_names = [e.get_text(strip=True) for e in teams_els if e.get_text(strip=True)]
-                    if len(team_names) >= 2:
+
+            # Strategy 1: look for cb-lv-scrs-col or any li/div with IPL context
+            ipl_sections = []
+            for el in soup.find_all(True):
+                txt = el.get_text(" ", strip=True)
+                if any(k.lower() in txt.lower() for k in ipl_keywords) and len(txt) < 500:
+                    ipl_sections.append(el)
+
+            for section in ipl_sections:
+                txt = section.get_text(" ", strip=True)
+                found = [t for t in ipl_teams if t in txt]
+                if len(found) >= 2:
+                    matches.append({
+                        "match_id": None,
+                        "team_a": found[0],
+                        "team_b": found[1],
+                        "series": "IPL",
+                        "venue": "",
+                        "state": "live",
+                    })
+                    break
+
+            # Strategy 2: regex scan for "TEAM vs TEAM" patterns
+            if not matches:
+                pattern = r'(' + '|'.join(ipl_teams) + r')\s+vs\s+(' + '|'.join(ipl_teams) + r')'
+                found_pairs = re.findall(pattern, html, re.IGNORECASE)
+                for team_a, team_b in found_pairs:
+                    if team_a.upper() != team_b.upper():
                         matches.append({
                             "match_id": None,
-                            "team_a": team_names[0],
-                            "team_b": team_names[1],
+                            "team_a": team_a,
+                            "team_b": team_b,
                             "series": "IPL",
                             "venue": "",
                             "state": "live",
                         })
+                        break
+
         except Exception as e:
             logger.debug(f"HTML parse error: {e}")
         return matches
@@ -220,6 +253,30 @@ class CricketStatsService:
                 except Exception:
                     continue
             if not data:
+                # JSON APIs dead — fall back to HTML scrape for team names
+                try:
+                    matches = await self.get_live_ipl_matches()
+                    if matches:
+                        m = matches[0]
+                        return {
+                            "match_id": str(m.get("match_id") or "1"),
+                            "team_a": m.get("team_a", ""),
+                            "team_b": m.get("team_b", ""),
+                            "innings": 1,
+                            "total_runs": 0,
+                            "total_wickets": 0,
+                            "overs": 0.0,
+                            "run_rate": 0.0,
+                            "required_run_rate": 0.0,
+                            "target": 0,
+                            "batting_team": m.get("team_a", ""),
+                            "venue": m.get("venue", ""),
+                            "status": m.get("state", "Live"),
+                            "source": "cricbuzz_html",
+                            "timestamp": datetime.utcnow().isoformat(),
+                        }
+                except Exception:
+                    pass
                 return None
 
             for match_type in data.get("typeMatches", []):

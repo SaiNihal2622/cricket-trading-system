@@ -218,7 +218,11 @@ class TelegramBot:
                 settings.TELEGRAM_API_HASH,
             )
 
-            await self.client.start()
+            await self.client.connect()
+            if not await self.client.is_user_authorized():
+                logger.warning("Telegram: Session not authorized. Falling back to Mock Mode.")
+                raise Exception("Unauthorized Telegram Session")
+                
             logger.info("Telegram client connected — scanning ALL joined channels")
 
             # Discover ALL joined channels/groups (not just configured ones)

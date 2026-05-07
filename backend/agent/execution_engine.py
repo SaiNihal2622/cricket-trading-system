@@ -246,51 +246,13 @@ class BetfairExchange(BaseExchange):
         return self._balance
 
 
-class RoyalBookExchangeAdapter(BaseExchange):
-    """Wraps RoyalBookExchange to implement BaseExchange interface."""
-
-    def __init__(self, rb_instance):
-        self._rb = rb_instance
-
-    async def place_back(self, match_id, team, odds, stake) -> OrderResult:
-        res = await self._rb.place_back_bet(team, stake, "match_odds")
-        return OrderResult(
-            success=res["success"],
-            order_id=f"RB-BACK-{str(team)[:3].upper()}-{int(stake)}",
-            filled_odds=odds,
-            filled_stake=stake,
-            message=res.get("message", ""),
-            exchange="royalbook",
-        )
-
-    async def place_lay(self, match_id, team, odds, stake) -> OrderResult:
-        res = await self._rb.place_lay_bet(team, stake)
-        return OrderResult(
-            success=res["success"],
-            order_id=f"RB-LAY-{str(team)[:3].upper()}-{int(stake)}",
-            filled_odds=odds,
-            filled_stake=stake,
-            message=res.get("message", ""),
-            exchange="royalbook",
-        )
-
-    async def get_current_odds(self, match_id) -> dict:
-        return self._rb.get_last_odds()
-
-    async def cancel_order(self, order_id) -> bool:
-        return False
-
-    def get_balance(self) -> float:
-        return 0.0
-
-    def get_stats(self) -> dict:
-        return {"exchange": "royalbook", "balance": 0.0}
 
 
-def create_exchange(exchange_type: str = "simulated", rb_instance=None, **kwargs) -> BaseExchange:
+
+def create_exchange(exchange_type: str = "simulated", exchange_instance=None, **kwargs) -> BaseExchange:
     """Factory for creating exchanges"""
-    if exchange_type == "royalbook" and rb_instance:
-        return RoyalBookExchangeAdapter(rb_instance)
+    if exchange_type == "stake" and exchange_instance:
+        return exchange_instance
     if exchange_type == "betfair":
         return BetfairExchange(**kwargs)
     return SimulatedExchange(**kwargs)
