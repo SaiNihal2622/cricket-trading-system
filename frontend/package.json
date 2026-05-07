@@ -10,7 +10,8 @@
     "recharts": "^2.13.0",
     "axios": "^1.7.7",
     "zustand": "^5.0.0",
-    "clsx": "^2.1.1"
+    "clsx": "^2.1.1",
+    "ajv": "^8.12.0"
   },
   "scripts": {
     "start": "react-scripts start",
