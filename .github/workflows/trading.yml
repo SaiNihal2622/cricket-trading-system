@@ -1,0 +1,117 @@
+name: Cricket Trading Engine
+
+on:
+  schedule:
+    # Run every 30 minutes during IPL hours (14:00-22:30 IST = 08:30-17:00 UTC)
+    - cron: '*/30 8-17 * 3-5 *'  # March-May (IPL season)
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Trading mode'
+        required: true
+        default: 'demo'
+        type: choice
+        options:
+          - demo
+          - live
+      scan_count:
+        description: 'Number of scans (0=continuous)'
+        required: false
+        default: '1'
+        type: string
+
+env:
+  TRADING_MODE: ${{ github.event.inputs.mode || 'demo' }}
+  CLOUDBET_API_KEY: ${{ secrets.CLOUDBET_API_KEY }}
+  NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+  GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+  GROK_API_KEY: ${{ secrets.GROK_API_KEY }}
+  OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+
+jobs:
+  trade:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      
+      - name: Initialize database
+        run: python -c "import db; db.init_db()"
+      
+      - name: Run trading scan
+        run: |
+          SCAN_COUNT=${{ github.event.inputs.scan_count || '1' }}
+          if [ "$SCAN_COUNT" = "0" ]; then
+            python main.py
+          else
+            for i in $(seq 1 $SCAN_COUNT); do
+              echo "=== Scan $i/$SCAN_COUNT ==="
+              python -c "import asyncio; from trading_engine import run_single_scan; asyncio.run(run_single_scan())"
+              if [ $i -lt $SCAN_COUNT ]; then
+                sleep 300
+              fi
+            done
+          fi
+      
+      - name: Upload trade database
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trades-${{ github.run_number }}
+          path: cricket_trading.db
+          retention-days: 30
+      
+      - name: Generate report
+        if: always()
+        run: python -c "
+          import db, json;
+          db.init_db();
+          stats = db.get_trade_stats();
+          trades = db.get_all_trades(limit=50);
+          report = {'stats': stats, 'trades': trades, 'total_trades': len(trades)};
+          print(json.dumps(report, indent=2, default=str));
+          with open('report.json', 'w') as f: json.dump(report, f, indent=2, default=str)
+          "
+      
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: report-${{ github.run_number }}
+          path: report.json
+          retention-days: 30
+
+  dashboard:
+    runs-on: ubuntu-latest
+    if: github.event.inputs.mode == 'live' || github.event_name == 'schedule'
+    needs: trade
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      
+      - name: Download trade database
+        uses: actions/download-artifact@v4
+        with:
+          name: trades-${{ github.run_number }}
+      
+      - name: Deploy dashboard (placeholder)
+        run: echo "Dashboard would deploy here with Railway/Render"
