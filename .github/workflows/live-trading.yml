@@ -1,12 +1,10 @@
 name: Live Cricket Trading
 
 on:
-  # Auto-trigger at 7:00 PM IST (1:30 PM UTC) on match days
   schedule:
-    - cron: '30 13 * * 3,4,5,6,7'  # Wed-Sun (typical IPL match days)
-    - cron: '30 13 * * 0,1'        # Mon-Tun (some double headers)
-  
-  # Manual trigger with custom parameters
+    - cron: '30 13 * * 3,4,5,6,7'
+    - cron: '30 13 * * 0,1'
+
   workflow_dispatch:
     inputs:
       mode:
@@ -34,11 +32,10 @@ env:
   SCAN_INTERVAL: ${{ github.event.inputs.scan_interval || '120' }}
 
 jobs:
-  # ─── Live Trading Engine ─────────────────────────────────────────────────────
   trade:
     runs-on: ubuntu-latest
-    timeout-minutes: 300  # 5 hours max
-    
+    timeout-minutes: 300
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -80,55 +77,51 @@ jobs:
           name: trading-results-${{ github.run_number }}
           path: |
             cricket_trading.db
-            trading_log_*.txt
+            trading_log_*.json
           retention-days: 30
 
       - name: Send summary to Telegram
         if: always()
         run: |
           python -c "
-          import asyncio, json, os
+          import asyncio, os, httpx
           from datetime import datetime
-          
-          # Read final stats from DB
+          from db import get_session_stats
           try:
-              import db
-              stats = db.get_session_stats()
-              mode = '${{ env.TRADING_MODE }}'
-              msg = f'''
-🏏 <b>Trading Session Complete</b>
-📅 {datetime.now().strftime('%Y-%m-%d %H:%M')}
-🎮 Mode: {mode.upper()}
-📊 Trades: {stats.get('total_trades', 0)}
-✅ Won: {stats.get('won', 0)}
-❌ Lost: {stats.get('lost', 0)}
-💰 P&L: {stats.get('pnl', 0):.2f}
-📈 Accuracy: {stats.get('accuracy', 0):.1%}
-🤖 Models: MIMO + Gemini + Grok + NVIDIA
-              '''
-          except:
-              msg = '🏏 Trading session completed. Check artifacts for details.'
-          
-          # Send via Telegram
-          import httpx
+              stats = get_session_stats()
+              mode = os.environ.get('TRADING_MODE', 'demo')
+              msg = 'CRICKET TRADING SESSION COMPLETE\n'
+              msg += 'Date: ' + datetime.now().strftime('%Y-%m-%d %H:%M') + '\n'
+              msg += 'Mode: ' + mode.upper() + '\n'
+              msg += 'Trades: ' + str(stats.get('total_trades', 0)) + '\n'
+              msg += 'Won: ' + str(stats.get('won', 0)) + '\n'
+              msg += 'Lost: ' + str(stats.get('lost', 0)) + '\n'
+              msg += 'P&L: ' + str(round(stats.get('pnl', 0), 2)) + '\n'
+              msg += 'Accuracy: ' + str(round(stats.get('accuracy', 0) * 100, 1)) + '%\n'
+              msg += 'Models: MIMO + Gemini + Grok + NVIDIA'
+          except Exception as e:
+              msg = 'Trading session completed. Check artifacts for details. Error: ' + str(e)
           token = os.getenv('TELEGRAM_BOT_TOKEN', '')
           chat_id = os.getenv('TELEGRAM_CHAT_ID', '')
           if token and chat_id:
               asyncio.run(httpx.AsyncClient().post(
-                  f'https://api.telegram.org/bot{token}/sendMessage',
-                  json={'chat_id': chat_id, 'text': msg, 'parse_mode': 'HTML'}
+                  'https://api.telegram.org/bot' + token + '/sendMessage',
+                  json={'chat_id': chat_id, 'text': msg}
               ))
               print('Telegram notification sent')
           else:
-              print('No Telegram config, skipping notification')
-          " || echo "Notification skipped"
+              print('No Telegram config, skipping')
+          "
+        env:
+          TRADING_MODE: ${{ env.TRADING_MODE }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_ALERT_CHAT_ID }}
 
-  # ─── Quick Demo Test ────────────────────────────────────────────────────────
   demo-test:
     runs-on: ubuntu-latest
     if: github.event_name == 'push'
     timeout-minutes: 10
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -150,7 +143,7 @@ jobs:
           import asyncio
           from config import MIMO_API_KEY, GEMINI_API_KEY, GROK_API_KEY
           from ai_ensemble import get_ensemble_prediction
-          
+
           async def test():
               result = await get_ensemble_prediction(
                   match_name='DC v KKR',
@@ -163,19 +156,17 @@ jobs:
                   venue_stats={'avg_1st': 170, 'powerplay': 52, 'death': 48, 'spin_friendly': False},
                   team_stats={'home_avg': 168, 'away_avg': 175, 'h2h': 'DC 12-15 KKR (27 matches)'}
               )
-              print(f'Ensemble probability: {result[\"ensemble_prob\"]}')
-              print(f'Consensus: {result[\"consensus_score\"]}')
-              print(f'Models agreed: {result[\"models_agreed\"]}/{result[\"models_total\"]}')
-              print(f'Edge: {result.get(\"edge\", 0):.1%}')
-              
-              # Check which models responded
+              print('Ensemble probability:', result['ensemble_prob'])
+              print('Consensus:', result['consensus_score'])
+              print('Models agreed:', result['models_agreed'], '/', result['models_total'])
+              print('Edge:', result.get('edge', 0))
               for pred in result.get('predictions', []):
-                  print(f'  {pred[\"model_name\"]}: {pred[\"predicted_prob\"]:.1%} (conf: {pred[\"confidence\"]:.1%})')
-              
+                  print('  ', pred['model_name'], ':', pred['predicted_prob'], '(conf:', pred['confidence'], ')')
               assert result['models_total'] >= 1, 'At least 1 model must respond'
-              print('✅ Demo test passed!')
-          
+              print('Demo test passed!')
+
           asyncio.run(test())
+          "
         env:
           MIMO_API_KEY: ${{ secrets.MIMO_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
