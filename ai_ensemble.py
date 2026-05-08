@@ -14,13 +14,15 @@ from config import (
     GEMINI_API_KEY, GEMINI_MODEL,
     GROK_API_KEY, GROK_BASE_URL, GROK_MODEL,
     OPENAI_API_KEY,
+    MIMO_API_KEY, MIMO_BASE_URL, MIMO_MODEL,
 )
 
 # Model weights (updated dynamically based on performance)
 MODEL_WEIGHTS = {
-    "nvidia_nemotron": 0.35,
-    "gemini_flash": 0.35,
-    "grok_3": 0.30,
+    "nvidia_nemotron": 0.25,
+    "gemini_flash": 0.25,
+    "grok_3": 0.25,
+    "mimo_omni": 0.25,
 }
 
 SYSTEM_PROMPT = """You are an expert cricket betting analyst for IPL matches. 
@@ -124,6 +126,36 @@ async def call_grok(prompt: str) -> Optional[dict]:
             return _parse_response(content, "grok_3")
     except Exception as e:
         print(f"[Grok] Error: {e}")
+        return None
+
+
+async def call_mimo(prompt: str) -> Optional[dict]:
+    """Call Xiaomi MiMo v2 Omni via API."""
+    if not MIMO_API_KEY:
+        return None
+    try:
+        async with httpx.AsyncClient(timeout=30) as client:
+            resp = await client.post(
+                f"{MIMO_BASE_URL}/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {MIMO_API_KEY}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": MIMO_MODEL,
+                    "messages": [
+                        {"role": "system", "content": SYSTEM_PROMPT},
+                        {"role": "user", "content": prompt},
+                    ],
+                    "temperature": 0.3,
+                    "max_tokens": 500,
+                },
+            )
+            data = resp.json()
+            content = data["choices"][0]["message"]["content"]
+            return _parse_response(content, "mimo_omni")
+    except Exception as e:
+        print(f"[MiMo] Error: {e}")
         return None
 
 
@@ -288,6 +320,7 @@ async def get_ensemble_prediction(
         call_nvidia(prompt),
         call_gemini(prompt),
         call_grok(prompt),
+        call_mimo(prompt),
         call_openai(prompt),
     ]
     

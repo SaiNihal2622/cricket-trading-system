@@ -11,6 +11,20 @@ from config import (
 import db
 from odds_fetcher import fetch_ipl_events, fetch_event_odds, parse_match_odds
 from ai_ensemble import get_ensemble_prediction
+from ipl_historical import enrich_prompt_context, build_stats
+
+# Load historical stats once at module level
+_HISTORICAL_STATS = None
+
+def get_historical_stats():
+    global _HISTORICAL_STATS
+    if _HISTORICAL_STATS is None:
+        try:
+            _HISTORICAL_STATS = build_stats()
+        except Exception as e:
+            print(f"[Historical] Could not load stats: {e}")
+            _HISTORICAL_STATS = {}
+    return _HISTORICAL_STATS
 
 
 def kelly_criterion(prob: float, odds: float, fraction: float = KELLY_FRACTION) -> float:
@@ -28,20 +42,33 @@ def kelly_criterion(prob: float, odds: float, fraction: float = KELLY_FRACTION) 
 
 
 def get_team_stats(team_name: str) -> dict:
-    """Get team statistics from config."""
+    """Get team statistics from config + historical data."""
     team = TEAMS.get(team_name, {})
+    stats = get_historical_stats()
+    hist = stats.get("team_stats", {}).get(team_name, {})
     return {
-        "avg_score": team.get("avg_score", 170),
+        "avg_score": hist.get("avg_score", team.get("avg_score", 170)),
         "home_ground": team.get("home_ground", ""),
         "short": team.get("short", team_name[:3].upper()),
+        "win_rate": hist.get("win_rate", 0.5),
+        "matches_played": hist.get("matches", 0),
     }
 
 
 def get_venue_stats(venue: str) -> dict:
-    """Get venue statistics."""
-    return VENUE_PATTERNS.get(venue, {
-        "avg_1st": 170, "powerplay": 52, "death": 48, "spin_friendly": False
-    })
+    """Get venue statistics from config + historical data."""
+    stats = get_historical_stats()
+    hist = stats.get("venue_stats", {}).get(venue, {})
+    config_venue = VENUE_PATTERNS.get(venue, {})
+    return {
+        "avg_1st": hist.get("avg_score", config_venue.get("avg_1st", 170)),
+        "powerplay": hist.get("avg_powerplay", config_venue.get("powerplay", 52)),
+        "death": config_venue.get("death", 48),
+        "spin_friendly": config_venue.get("spin_friendly", False),
+        "high_score": hist.get("high_score", 0),
+        "low_score": hist.get("low_score", 0),
+        "matches_at_venue": hist.get("matches", 0),
+    }
 
 
 def extract_teams_from_event(event_name: str) -> tuple:
@@ -68,10 +95,24 @@ async def analyze_opportunity(opp: dict, live_score: Optional[dict] = None) -> O
     home_stats = get_team_stats(home_team)
     away_stats = get_team_stats(away_team)
     
+    # Get historical context
+    stats = get_historical_stats()
+    h2h = stats.get("head_to_head", {}).get(home_team, {}).get(away_team, {})
+    home_at_venue = stats.get("team_at_venue", {}).get(home_team, {}).get(venue, {})
+    away_at_venue = stats.get("team_at_venue", {}).get(away_team, {}).get(venue, {})
+    
+    h2h_str = f"{home_team} {h2h.get('wins', '?')}-{h2h.get('losses', '?')} {away_team} ({h2h.get('matches', '?')} matches)" if h2h else "N/A"
+    
     team_stats = {
         "home_avg": home_stats["avg_score"],
         "away_avg": away_stats["avg_score"],
-        "h2h": "N/A",
+        "h2h": h2h_str,
+        "home_win_rate": home_stats.get("win_rate", 0.5),
+        "away_win_rate": away_stats.get("win_rate", 0.5),
+        "home_at_venue_avg": home_at_venue.get("avg_score", "N/A"),
+        "away_at_venue_avg": away_at_venue.get("avg_score", "N/A"),
+        "home_at_venue_matches": home_at_venue.get("matches", 0),
+        "away_at_venue_matches": away_at_venue.get("matches", 0),
     }
     
     # Get AI ensemble prediction

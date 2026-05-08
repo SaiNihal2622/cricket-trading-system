@@ -1,0 +1,3769 @@
+{
+  "sequence": "822",
+  "id": 34351209,
+  "sport": {
+    "name": "Cricket",
+    "key": "cricket"
+  },
+  "competition": {
+    "name": "Indian Premier League",
+    "key": "cricket-india-indian-premier-league",
+    "category": {
+      "name": "India",
+      "key": "india"
+    }
+  },
+  "home": {
+    "name": "Delhi Capitals",
+    "key": "cb39-delhi-daredevils",
+    "abbreviation": "DC",
+    "nationality": "IND",
+    "researchId": ""
+  },
+  "away": {
+    "name": "Kolkata Knight Riders",
+    "key": "cb41-kolkata-knight-riders",
+    "abbreviation": "KKR",
+    "nationality": "IND",
+    "researchId": ""
+  },
+  "players": {
+    "c107bb9-harshit-rana": {
+      "name": "Harshit Rana",
+      "team": "AWAY",
+      "position": {
+        "name": "",
+        "key": ""
+      },
+      "id": 1080249,
+      "nationality": "",
+      "key": "",
+      "researchId": "",
+      "runnerData": {
+        "stallDraw": 0,
+        "clothNumber": 0,
+        "clothImage": "",
+        "weight": 0,
+        "age": 0,
+        "trainer": "",
+        "jockey": "",
+        "owner": "",
+        "form": "",
+        "withdrawn": "",
+        "position": 0
+      }
+    },
+    "c14f9a-nitish-rana": {
+      "name": "Nitish Rana",
+      "team": "HOME",
+      "position": {
+        "name": "",
+        "key": ""
+      },
+      "id": 85914,
+      "nationality": "",
+      "key": "",
+      "researchId": "",
+      "runnerData": {
+        "stallDraw": 0,
+        "clothNumber": 0,
+        "clothImage": "",
+        "weight": 0,
+        "age": 0,
+        "trainer": "",
+        "jockey": "",
+        "owner": "",
+        "form": "",
+        "withdrawn": "",
+        "position": 0
+      }
+    },
+    "c15ec06-tripurana-vijay": {
+      "name": "Tripurana Vijay",
+      "team": "HOME",
+      "position": {
+        "name": "",
+        "key": ""
+      },
+      "id": 1436678,
+      "nationality": "",
+      "key": "",
+      "researchId": "",
+      "runnerData": {
+        "stallDraw": 0,
+        "clothNumber": 0,
+        "clothImage": "",
+        "weight": 0,
+        "age": 0,
+        "trainer": "",
+        "jockey": "",
+        "owner": "",
+        "form": "",
+        "withdrawn": "",
+        "position": 0
+      }
+    },
+    "c1901c-mitchell-aaron-starc": {
+      "name": "Mitchell Starc",
+      "team": "HOME",
+      "position": {
+        "name": "",
+        "key": ""
+      },
+      "id": 102428,
+      "nationality": "",
+      "key": "",
+      "researchId": "",
+      "runnerData": {
+        "stallDraw": 0,
+        "clothNumber": 0,
+        "clothImage": "",
+        "weight": 0,
+        "age": 0,
+        "trainer": "",
+        "jockey": "",
+        "owner": "",
+        "form": "",
+        "withdrawn": "",
+        "position": 0
+      }
+    },
+    "c1a5c70-ajinkya-rahane": {
+      "name": "Ajinkya Rahane",
+      "team": "AWAY",
+      "position": {
+        "name": "",
+        "key": ""
+      },
+      "id": 1727600,
+      "nationality": "",
+      "key": "",
+      "researchId": "",
+      "runnerData": {
+        "stallDraw": 0,
+        "clothNumber": 0,
+        "clothImage": "",
+        "weight": 0,
+        "age": 0,
+        "trainer": "",
+        "jockey": "",
+        "owner": "",
+        "form": "",
+        "withdrawn": "",
+        "position": 0
+      }
+    },
+    "c1a5ca6-sunil-narine": {
+      "name": "Sunil Narine",
+      "team": "AWAY",
+      "position": {
+        "name": "",
+        "key": ""
+      },
+      "id": 1727654,
+      "nationality": "",
+      "key": "",
+      "researchId": "",
+      "runnerData": {
+        "stallDraw": 0,
+        "clothNumber": 0,
+        "clothImage": "",
+        "weight": 0,
+        "age": 0,
+        "trainer": "",
+        "jockey": "",
+        "owner": "",
+        "form": "",
+        "withdrawn": "",
+        "position": 0
+      }
+    },
+    "c1a5cad-ben-duckett": {
+      "name": "Ben Duckett",
+      "team": "HOME",
+      "position": {
+        "name": "",
+        "key": ""
+      },
+      "id": 1727661,
+      "nationality": "",
+      "key": "",
+      "researchId": "",
+      "runnerData": {
+        "stallDraw": 0,
+        "clothNumber": 0,
+        "clothImage": "",
+        "weight": 0,
+        "age": 0,
+        "trainer": "",
+        "jockey": "",
+        "owner": "",
+        "form": "",
+        "withdrawn": "",
+        "position": 0
+      }
+    },
+    "c1a5cda-david-miller": {
+      "name": "David Miller",
+      "team": "HOME",
+      "position": {
+        "name": "",
+        "key": ""
+      },
+      "id": 1727706,
+      "nationality": "",
+      "key": "",
+      "researchId": "",
+      "runnerData": {
+        "stallDraw": 0,
+        "clothNumber": 0,
+        "clothImage": "",
+        "weight": 0,
+        "age": 0,
+        "trainer": "",
+        "jockey": "",
+        "owner": "",
+        "form": "",
+        "withdrawn": "",
+        "position": 0
+      }
+    },
+    "c1a5d06-dushmantha-chameera": {
+      "name": "Dushmantha Chameera",
+      "team": "HOME",
+      "position": {
+        "name": "",
+        "key": ""
+      },
+      "id": 1727750,
+      "nationality": "",
+      "key": "",
+      "researchId": "",
+      "runnerData": {
+        "stallDraw": 0,
+        "clothNumber": 0,
+        "clothImage": "",
+        "weight": 0,
+        "age": 0,
+        "trainer": "",
+        "jockey": "",
+        "owner": "",
+        "form": "",
+        "withdrawn": "",
+        "position": 0
+      }
+    },
+    "c1a5ff8-manish-pandey": {
+      "name": "Manish Pandey",
+      "team": "AWAY",
+      "position": {
+        "name": "",
+        "key": ""
+      },
+      "id": 1728504,
+      "nationality": "",
+      "key": "",
+      "researchId": "",
+      "runnerData": {
+        "stallDraw": 0,
+        "clothNumber": 0,
+        "clothImage": "",
+        "weight": 0,
+        "age": 0,
+        "trainer": "",
+        "jockey": "",
+        "owner": "",
+        "form": "",
+        "withdrawn": "",
+        "position": 0
+      }
+    },
+    "c1a5ffa-karun-nair": {
+      "name": "Karun Nair",
+      "team": "HOME",
+      "position": {
+        "name": "",
+        "key": ""
+      },
+      "id": 1728506,
+      "nationality": "",
+      "key": "",
+      "researchId": "",
+      "runnerData": {
+        "stallDraw": 0,
+        "clothNumber": 0,
+        "clothImage": "",
+        "weight": 0,
+        "age": 0,
+        "trainer": "",
+        "jockey": "",
+        "owner": "",
+        "form": "",
+        "withdrawn": "",
+        "position": 0
+      }
+    },
+    "c1a6fe9-t-natarajan": {
+      "name": "T Natarajan",
+      "team": "HOME",
+      "position": {
+        "name": "",
+        "key": ""
+      },
+      "id": 1732585,
+      "nationality": "",
+      "key": "",
+      "researchId": "",
+      "runnerData": {
+        "stallDraw": 0,
+        "clothNumber": 0,
+        "clothImage": "",
+        "weight": 0,
+        "age": 0,
+        "trainer": "",
+        "jockey": "",
+        "owner": "",
+        "form": "",
+        "withdrawn": "",
+        "position": 0
+      }
+    },
+    "c1a8a8c-sahil-parikh": {
+      "name": "Sahil Parikh",
+      "team": "HOME",
+      "position": {
+        "name": "",
+        "key": ""
+      },
+      "id": 1739404,
+      "nationality": "",
+      "key": "",
+      "researchId": "",
+      "runnerData": {
+        "stallDraw": 0,
+        "clothNumber": 0,
+        "clothImage": "",
+        "weight": 0,
+        "age": 0,
+        "trainer": "",
+        "jockey": "",
+        "owner": "",
+        "form": "",
+        "withdrawn": "",
+        "position": 0
+      }
+    },
+    "c1b4030-vipraj-nigam": {
+      "name": "Vipraj Nigam",
+      "team": "HOME",
+      "position": {
+        "name": "",
+        "key": ""
+      },
+      "id": 1785904,
+      "nationality": "",
+      "key": "",
+      "researchId": "",
+      "runnerData": {
+        "stallDraw": 0,
+        "clothNumber": 0,
+        "clothImage": "",
+        "weight": 0,
+        "age": 0,
+        "trainer": "",
+        "jockey": "",
+        "owner": "",
+        "form": "",
+        "withdrawn": "",
+        "position": 0
+      }
+    },
+    "c1d19ad-madhav-tiwari": {
+      "name": "Madhav Tiwari",
+      "team": "HOME",
+      "position": {
+        "name": "",
+        "key": ""
+      },
+      "id": 1907117,
+      "nationality": "",
+      "key": "",
+      "researchId": "",
+      "runnerData": {
+        "stallDraw": 0,
+        "clothNumber": 0,
+        "clothImage": "",
+        "weight": 0,
+        "age": 0,
+        "trainer": "",
+        "jockey": "",
+        "owner": "",
+        "form": "",
+        "withdrawn": "",
+        "position": 0
+      }
+    },
+    "c1e8f5b-sarthak-ranjan": {
+      "name": "Sarthak Ranjan",
+      "team": "AWAY",
+      "position": {
+        "name": "",
+        "key": ""
+      },
+      "id": 2002779,
+      "nationality": "",
+      "key": "",
+      "researchId": "",
+      "runnerData": {
+        "stallDraw": 0,
+        "clothNumber": 0,
+        "clothImage": "",
+        "weight": 0,
+        "age": 0,
+        "trainer": "",
+        "jockey": "",
+        "owner": "",
+        "form": "",
+        "withdrawn": "",
+        "position": 0
+      }
+    },
+    "c1e8f5c-tejasvi-dahiya": {
+      "name": "Tejasvi Dahiya",
+      "team": "AWAY",
+      "position": {
+        "name": "",
+        "key": ""
+      },
+      "id": 2002780,
+      "nationality": "",
+      "key": "",
+      "researchId": "",
+      "runnerData": {
+        "stallDraw": 0,
+        "clothNumber": 0,
+        "clothImage": "",
+        "weight": 0,
+        "age": 0,
+        "trainer": "",
+        "jockey": "",
+        "owner": "",
+        "form": "",
+        "withdrawn": "",
+        "position": 0
+      }
+    },
+    "c21ca04-daksh-kamra": {
+      "name": "Daksh Kamra",
+      "team": "AWAY",
+      "position": {
+        "name": "",
+        "key": ""
+      },
+      "id": 2214404,
+      "nationality": "",
+      "key": "",
+      "researchId": "",
+      "runnerData": {
+        "stallDraw": 0,
+        "clothNumber": 0,
+        "clothImage": "",
+        "weight": 0,
+        "age": 0,
+        "trainer": "",
+        "jockey": "",
+        "owner": "",
+        "form": "",
+        "withdrawn": "",
+        "position": 0
+      }
+    },
+    "c21ee77-saurabh-dubey": {
+      "name": "Saurabh Dubey",
+      "team": "AWAY",
+      "position": {
+        "name": "",
+        "key": ""
+      },
+      "id": 2223735,
+      "nationality": "",
+      "key": "",
+      "researchId": "",
+      "runnerData": {
+        "stallDraw": 0,
+        "clothNumber": 0,
+        "clothImage": "",
+        "weight": 0,
+        "age": 0,
+        "trainer": "",
+        "jockey": "",
+        "owner": "",
+        "form": "",
+        "withdrawn": "",
+        "position": 0
+      }
+    },
+    "c36573-kuldeep-yadav": {
+      "name": "Kuldeep Yadav",
+      "team": "HOME",
+      "position": {
+        "name": "",
+        "key": ""
+      },
+      "id": 222579,
+      "nationality": "",
+      "key": "",
+      "researchId": "",
+      "runnerData": {
+        "stallDraw": 0,
+        "clothNumber": 0,
+        "clothImage": "",
+        "weight": 0,
+        "age": 0,
+        "trainer": "",
+        "jockey": "",
+        "owner": "",
+        "form": "",
+        "withdrawn": "",
+        "position": 0
+      }
+    },
+    "c4c00c-lungisani-ngidi": {
+      "name": "Lungi Ngidi",
+      "team": "HOME",
+      "position": {
+        "name": "",
+        "key": ""
+      },
+      "id": 311308,
+      "nationality": "",
+      "key": "",
+      "researchId": "",
+      "runnerData": {
+        "stallDraw": 0,
+        "clothNumber": 0,
+        "clothImage": "",
+        "weight": 0,
+        "age": 0,
+        "trainer": "",
+        "jockey": "",
+        "owner": "",
+        "form": "",
+        "withdrawn": "",
+        "position": 0
+      }
+    },
+    "c5a47e-rovman-powell": {
+      "name": "Rovman Powell",
+      "team": "AWAY",
+      "position": {
+        "name": "",
+        "key": ""
+      },
+      "id": 369790,
+      "nationality": "",
+      "key": "",
+      "researchId": "",
+      "runnerData": {
+        "stallDraw": 0,
+        "clothNumber": 0,
+        "clothImage": "",
+        "weight": 0,
+        "age": 0,
+        "trainer": "",
+        "jockey": "",
+        "owner": "",
+        "form": "",
+        "withdrawn": "",
+        "position": 0
+      }
+    },
+    "c5fad3-pathum-nissanka": {
+      "name": "Pathum Nissanka",
+      "team": "HOME",
+      "position": {
+        "name": "",
+        "key": ""
+      },
+      "id": 391891,
+      "nationality": "",
+      "key": "",
+      "researchId": "",
+      "runnerData": {
+        "stallDraw": 0,
+        "clothNumber": 0,
+        "clothImage": "",
+        "weight": 0,
+        "age": 0,
+        "trainer": "",
+        "jockey": "",
+        "owner": "",
+        "form": "",
+        "withdrawn": "",
+        "position": 0
+      }
+    },
+    "c768a9-roy-anukul": {
+      "name": "Anukul Roy",
+      "team": "AWAY",
+      "position": {
+        "name": "",
+        "key": ""
+      },
+      "id": 485545,
+      "nationality": "",
+      "key": "",
+      "researchId": "",
+      "runnerData": {
+        "stallDraw": 0,
+        "clothNumber": 0,
+        "clothImage": "",
+        "weight": 0,
+        "age": 0,
+        "trainer": "",
+        "jockey": "",
+        "owner": "",
+        "form": "",
+        "withdrawn": "",
+        "position": 0
+      }
+    },
+    "c768b6-singh-rinku": {
+      "name": "Rinku Singh",
+      "team": "AWAY",
+      "position": {
+        "name": "",
+        "key": ""
+      },
+      "id": 485558,
+      "nationality": "",
+      "key": "",
+      "researchId": "",
+      "runnerData": {
+        "stallDraw": 0,
+        "clothNumber": 0,
+        "clothImage": "",
+        "weight": 0,
+        "age": 0,
+        "trainer": "",
+        "jockey": "",
+        "owner": "",
+        "form": "",
+        "withdrawn": "",
+        "position": 0
+      }
+    },
+    "c769ef-muzarabani-blessing": {
+      "name": "Blessing Muzarabani",
+      "team": "AWAY",
+      "position": {
+        "name": "",
+        "key": ""
+      },
+      "id": 485871,
+      "nationality": "",
+      "key": "",
+      "researchId": "",
+      "runnerData": {
+        "stallDraw": 0,
+        "clothNumber": 0,
+        "clothImage": "",
+        "weight": 0,
+        "age": 0,
+        "trainer": "",
+        "jockey": "",
+        "owner": "",
+        "form": "",
+        "withdrawn": "",
+        "position": 0
+      }
+    },
+    "c7bf94-seifert-tim": {
+      "name": "Tim Seifert",
+      "team": "AWAY",
+      "position": {
+        "name": "",
+        "key": ""
+      },
+      "id": 507796,
+      "nationality": "",
+      "key": "",
+      "researchId": "",
+      "runnerData": {
+        "stallDraw": 0,
+        "clothNumber": 0,
+        "clothImage": "",
+        "weight": 0,
+        "age": 0,
+        "trainer": "",
+        "jockey": "",
+        "owner": "",
+        "form": "",
+        "withdrawn": "",
+        "position": 0
+      }
+    },
+    "c7d7a9-deep-akash": {
+      "name": "Akash Deep",
+      "team": "AWAY",
+      "position": {
+        "name": "",
+        "key": ""
+      },
+      "id": 513961,
+      "nationality": "",
+      "key": "",
+      "researchId": "",
+      "runnerData": {
+        "stallDraw": 0,
+        "clothNumber": 0,
+        "clothImage": "",
+        "weight": 0,
+        "age": 0,
+        "trainer": "",
+        "jockey": "",
+        "owner": "",
+        "form": "",
+        "withdrawn": "",
+        "position": 0
+      }
+    },
+    "c7e316-ravindra-rachin": {
+      "name": "Rachin Ravindra",
+      "team": "AWAY",
+      "position": {
+        "name": "",
+        "key": ""
+      },
+      "id": 516886,
+      "nationality": "",
+      "key": "",
+      "researchId": "",
+      "runnerData": {
+        "stallDraw": 0,
+        "clothNumber": 0,
+        "clothImage": "",
+        "weight": 0,
+        "age": 0,
+        "trainer": "",
+        "jockey": "",
+        "owner": "",
+        "form": "",
+        "withdrawn": "",
+        "position": 0
+      }
+    },
+    "c7e424-mandal-ajay": {
+      "name": "Ajay Jadav Mandal",
+      "team": "HOME",
+      "position": {
+        "name": "",
+        "key": ""
+      },
+      "id": 517156,
+      "nationality": "",
+      "key": "",
+      "researchId": "",
+      "runnerData": {
+        "stallDraw": 0,
+        "clothNumber": 0,
+        "clothImage": "",
+        "weight": 0,
+        "age": 0,
+        "trainer": "",
+        "jockey": "",
+        "owner": "",
+        "form": "",
+        "withdrawn": "",
+        "position": 0
+      }
+    },
+    "c7ee0a-sharma-ashutosh": {
+      "name": "Ashutosh Sharma",
+      "team": "HOME",
+      "position": {
+        "name": "",
+        "key": ""
+      },
+      "id": 519690,
+      "nationality": "",
+      "key": "",
+      "researchId": "",
+      "runnerData": {
+        "stallDraw": 0,
+        "clothNumber": 0,
+        "clothImage": "",
+        "weight": 0,
+        "age": 0,
+        "trainer": "",
+        "jockey": "",
+        "owner": "",
+        "form": "",
+        "withdrawn": "",
+        "position": 0
+      }
+    },
+    "c8b5ff-kartik-tyagi": {
+      "name": "Kartik Tyagi",
+      "team": "AWAY",
+      "position": {
+        "name": "",
+        "key": ""
+      },
+      "id": 570879,
+      "nationality": "",
+      "key": "",
+      "researchId": "",
+      "runnerData": {
+        "stallDraw": 0,
+        "clothNumber": 0,
+        "clothImage": "",
+        "weight": 0,
+        "age": 0,
+        "trainer": "",
+        "jockey": "",
+        "owner": "",
+        "form": "",
+        "withdrawn": "",
+        "position": 0
+      }
+    },
+    "c8d875-matheesha-pathirana": {
+      "name": "Matheesha Pathirana",
+      "team": "AWAY",
+      "position": {
+        "name": "",
+        "key": ""
+      },
+      "id": 579701,
+      "nationality": "",
+      "key": "",
+      "researchId": "",
+      "runnerData": {
+        "stallDraw": 0,
+        "clothNumber": 0,
+        "clothImage": "",
+        "weight": 0,
+        "age": 0,
+        "trainer": "",
+        "jockey": "",
+        "owner": "",
+        "form": "",
+        "withdrawn": "",
+        "position": 0
+      }
+    },
+    "c93ec3-aquib-nabi": {
+      "name": "Aquib Nabi",
+      "team": "HOME",
+      "position": {
+        "name": "",
+        "key": ""
+      },
+      "id": 605891,
+      "nationality": "",
+      "key": "",
+      "researchId": "",
+      "runnerData": {
+        "stallDraw": 0,
+        "clothNumber": 0,
+        "clothImage": "",
+        "weight": 0,
+        "age": 0,
+        "trainer": "",
+        "jockey": "",
+        "owner": "",
+        "form": "",
+        "withdrawn": "",
+        "position": 0
+      }
+    },
+    "c941fa-mukesh-kumar": {
+      "name": "Mukesh Kumar",
+      "team": "HOME",
+      "position": {
+        "name": "",
+        "key": ""
+      },
+      "id": 606714,
+      "nationality": "",
+      "key": "",
+      "researchId": "",
+      "runnerData": {
+        "stallDraw": 0,
+        "clothNumber": 0,
+        "clothImage": "",
+        "weight": 0,
+        "age": 0,
+        "trainer": "",
+        "jockey": "",
+        "owner": "",
+        "form": "",
+        "withdrawn": "",
+        "position": 0
+      }
+    },
+    "ca4b91-varun-chakravarthy": {
+      "name": "Varun Chakravarthy",
+      "team": "AWAY",
+      "position": {
+        "name": "",
+        "key": ""
+      },
+      "id": 674705,
+      "nationality": "",
+      "key": "",
+      "researchId": "",
+      "runnerData": {
+        "stallDraw": 0,
+        "clothNumber": 0,
+        "clothImage": "",
+        "weight": 0,
+        "age": 0,
+        "trainer": "",
+        "jockey": "",
+        "owner": "",
+        "form": "",
+        "withdrawn": "",
+        "position": 0
+      }
+    },
+    "ca4b94-rahul-tripathi": {
+      "name": "Rahul Tripathi",
+      "team": "AWAY",
+      "position": {
+        "name": "",
+        "key": ""
+      },
+      "id": 674708,
+      "nationality": "",
+      "key": "",
+      "researchId": "",
+      "runnerData": {
+        "stallDraw": 0,
+        "clothNumber": 0,
+        "clothImage": "",
+        "weight": 0,
+        "age": 0,
+        "trainer": "",
+        "jockey": "",
+        "owner": "",
+        "form": "",
+        "withdrawn": "",
+        "position": 0
+      }
+    },
+    "ca4bb5-prithvi-shaw": {
+      "name": "Prithvi Shaw",
+      "team": "HOME",
+      "position": {
+        "name": "",
+        "key": ""
+      },
+      "id": 674741,
+      "nationality": "",
+      "key": "",
+      "researchId": "",
+      "runnerData": {
+        "stallDraw": 0,
+        "clothNumber": 0,
+        "clothImage": "",
+        "weight": 0,
+        "age": 0,
+        "trainer": "",
+        "jockey": "",
+        "owner": "",
+        "form": "",
+        "withdrawn": "",
+        "position": 0
+      }
+    },
+    "cac639-ramandeep-singh": {
+      "name": "Ramandeep Singh",
+      "team": "AWAY",
+      "position": {
+        "name": "",
+        "key": ""
+      },
+      "id": 706105,
+      "nationality": "",
+      "key": "",
+      "researchId": "",
+      "runnerData": {
+        "stallDraw": 0,
+        "clothNumber": 0,
+        "clothImage": "",
+        "weight": 0,
+        "age": 0,
+        "trainer": "",
+        "jockey": "",
+        "owner": "",
+        "form": "",
+        "withdrawn": "",
+        "position": 0
+      }
+    },
+    "cac659-sameer-rizvi": {
+      "name": "Sameer Rizvi",
+      "team": "HOME",
+      "position": {
+        "name": "",
+        "key": ""
+      },
+      "id": 706137,
+      "nationality": "",
+      "key": "",
+      "researchId": "",
+      "runnerData": {
+        "stallDraw": 0,
+        "clothNumber": 0,
+        "clothImage": "",
+        "weight": 0,
+        "age": 0,
+        "trainer": "",
+        "jockey": "",
+        "owner": "",
+        "form": "",
+        "withdrawn": "",
+        "position": 0
+      }
+    },
+    "cadbeb-vaibhav-arora": {
+      "name": "Vaibhav Arora",
+      "team": "AWAY",
+      "position": {
+        "name": "",
+        "key": ""
+      },
+      "id": 711659,
+      "nationality": "",
+      "key": "",
+      "researchId": "",
+      "runnerData": {
+        "stallDraw": 0,
+        "clothNumber": 0,
+        "clothImage": "",
+        "weight": 0,
+        "age": 0,
+        "trainer": "",
+        "jockey": "",
+        "owner": "",
+        "form": "",
+        "withdrawn": "",
+        "position": 0
+      }
+    },
+    "cae3ed-finn-allen": {
+      "name": "Finn Allen",
+      "team": "AWAY",
+      "position": {
+        "name": "",
+        "key": ""
+      },
+      "id": 713709,
+      "nationality": "",
+      "key": "",
+      "researchId": "",
+      "runnerData": {
+        "stallDraw": 0,
+        "clothNumber": 0,
+        "clothImage": "",
+        "weight": 0,
+        "age": 0,
+        "trainer": "",
+        "jockey": "",
+        "owner": "",
+        "form": "",
+        "withdrawn": "",
+        "position": 0
+      }
+    },
+    "cae73d-cameron-green": {
+      "name": "Cameron Green",
+      "team": "AWAY",
+      "position": {
+        "name": "",
+        "key": ""
+      },
+      "id": 714557,
+      "nationality": "",
+      "key": "",
+      "researchId": "",
+      "runnerData": {
+        "stallDraw": 0,
+        "clothNumber": 0,
+        "clothImage": "",
+        "weight": 0,
+        "age": 0,
+        "trainer": "",
+        "jockey": "",
+        "owner": "",
+        "form": "",
+        "withdrawn": "",
+        "position": 0
+      }
+    },
+    "cae761-navdeep-saini": {
+      "name": "Navdeep Saini",
+      "team": "AWAY",
+      "position": {
+        "name": "",
+        "key": ""
+      },
+      "id": 714593,
+      "nationality": "",
+      "key": "",
+      "researchId": "",
+      "runnerData": {
+        "stallDraw": 0,
+        "clothNumber": 0,
+        "clothImage": "",
+        "weight": 0,
+        "age": 0,
+        "trainer": "",
+        "jockey": "",
+        "owner": "",
+        "form": "",
+        "withdrawn": "",
+        "position": 0
+      }
+    },
+    "cb02be-tristan-stubbs": {
+      "name": "Tristan Stubbs",
+      "team": "HOME",
+      "position": {
+        "name": "",
+        "key": ""
+      },
+      "id": 721598,
+      "nationality": "",
+      "key": "",
+      "researchId": "",
+      "runnerData": {
+        "stallDraw": 0,
+        "clothNumber": 0,
+        "clothImage": "",
+        "weight": 0,
+        "age": 0,
+        "trainer": "",
+        "jockey": "",
+        "owner": "",
+        "form": "",
+        "withdrawn": "",
+        "position": 0
+      }
+    },
+    "cb4cb7-kl-rahul": {
+      "name": "KL Rahul",
+      "team": "HOME",
+      "position": {
+        "name": "",
+        "key": ""
+      },
+      "id": 740535,
+      "nationality": "",
+      "key": "",
+      "researchId": "",
+      "runnerData": {
+        "stallDraw": 0,
+        "clothNumber": 0,
+        "clothImage": "",
+        "weight": 0,
+        "age": 0,
+        "trainer": "",
+        "jockey": "",
+        "owner": "",
+        "form": "",
+        "withdrawn": "",
+        "position": 0
+      }
+    },
+    "cb4cb8-axar-patel": {
+      "name": "Axar Patel",
+      "team": "HOME",
+      "position": {
+        "name": "",
+        "key": ""
+      },
+      "id": 740536,
+      "nationality": "",
+      "key": "",
+      "researchId": "",
+      "runnerData": {
+        "stallDraw": 0,
+        "clothNumber": 0,
+        "clothImage": "",
+        "weight": 0,
+        "age": 0,
+        "trainer": "",
+        "jockey": "",
+        "owner": "",
+        "form": "",
+        "withdrawn": "",
+        "position": 0
+      }
+    },
+    "cbc0e9-rehan-ahmed": {
+      "name": "Rehan Ahmed",
+      "team": "HOME",
+      "position": {
+        "name": "",
+        "key": ""
+      },
+      "id": 770281,
+      "nationality": "",
+      "key": "",
+      "researchId": "",
+      "runnerData": {
+        "stallDraw": 0,
+        "clothNumber": 0,
+        "clothImage": "",
+        "weight": 0,
+        "age": 0,
+        "trainer": "",
+        "jockey": "",
+        "owner": "",
+        "form": "",
+        "withdrawn": "",
+        "position": 0
+      }
+    },
+    "cc28c4-prashant-solanki": {
+      "name": "Prashant Solanki",
+      "team": "AWAY",
+      "position": {
+        "name": "",
+        "key": ""
+      },
+      "id": 796868,
+      "nationality": "",
+      "key": "",
+      "researchId": "",
+      "runnerData": {
+        "stallDraw": 0,
+        "clothNumber": 0,
+        "clothImage": "",
+        "weight": 0,
+        "age": 0,
+        "trainer": "",
+        "jockey": "",
+        "owner": "",
+        "form": "",
+        "withdrawn": "",
+        "position": 0
+      }
+    },
+    "cc690c-abhishek-porel": {
+      "name": "Abhishek Porel",
+      "team": "HOME",
+      "position": {
+        "name": "",
+        "key": ""
+      },
+      "id": 813324,
+      "nationality": "",
+      "key": "",
+      "researchId": "",
+      "runnerData": {
+        "stallDraw": 0,
+        "clothNumber": 0,
+        "clothImage": "",
+        "weight": 0,
+        "age": 0,
+        "trainer": "",
+        "jockey": "",
+        "owner": "",
+        "form": "",
+        "withdrawn": "",
+        "position": 0
+      }
+    },
+    "cc7d55-umran-malik": {
+      "name": "Umran Malik",
+      "team": "AWAY",
+      "position": {
+        "name": "",
+        "key": ""
+      },
+      "id": 818517,
+      "nationality": "",
+      "key": "",
+      "researchId": "",
+      "runnerData": {
+        "stallDraw": 0,
+        "clothNumber": 0,
+        "clothImage": "",
+        "weight": 0,
+        "age": 0,
+        "trainer": "",
+        "jockey": "",
+        "owner": "",
+        "form": "",
+        "withdrawn": "",
+        "position": 0
+      }
+    },
+    "ce349-kyle-a-jamieson": {
+      "name": "Kyle Jamieson",
+      "team": "HOME",
+      "position": {
+        "name": "",
+        "key": ""
+      },
+      "id": 58185,
+      "nationality": "",
+      "key": "",
+      "researchId": "",
+      "runnerData": {
+        "stallDraw": 0,
+        "clothNumber": 0,
+        "clothImage": "",
+        "weight": 0,
+        "age": 0,
+        "trainer": "",
+        "jockey": "",
+        "owner": "",
+        "form": "",
+        "withdrawn": "",
+        "position": 0
+      }
+    },
+    "cec84d-angkrish-avaneesh-raghuvanshi": {
+      "name": "Angkrish Avaneesh Raghuvanshi",
+      "team": "AWAY",
+      "position": {
+        "name": "",
+        "key": ""
+      },
+      "id": 968781,
+      "nationality": "",
+      "key": "",
+      "researchId": "",
+      "runnerData": {
+        "stallDraw": 0,
+        "clothNumber": 0,
+        "clothImage": "",
+        "weight": 0,
+        "age": 0,
+        "trainer": "",
+        "jockey": "",
+        "owner": "",
+        "form": "",
+        "withdrawn": "",
+        "position": 0
+      }
+    }
+  },
+  "status": "TRADING",
+  "markets": {
+    "cricket.any_player_to_score_milestone.v2": {
+      "submarkets": {
+        "period=innings1&milestone=100": {
+          "sequence": "822",
+          "selections": [
+            {
+              "outcome": "yes",
+              "params": "innings=1&milestone=100",
+              "marketUrl": "cricket.any_player_to_score_milestone.v2/yes?innings=1&milestone=100",
+              "price": 5.7,
+              "minStake": 0.1,
+              "maxStake": 613.02038,
+              "probability": 0.162,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "no",
+              "params": "innings=1&milestone=100",
+              "marketUrl": "cricket.any_player_to_score_milestone.v2/no?innings=1&milestone=100",
+              "price": 1.1,
+              "minStake": 0.1,
+              "maxStake": 28812,
+              "probability": 0.838,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            }
+          ]
+        },
+        "period=innings1&milestone=50": {
+          "sequence": "822",
+          "selections": [
+            {
+              "outcome": "yes",
+              "params": "innings=1&milestone=50",
+              "marketUrl": "cricket.any_player_to_score_milestone.v2/yes?innings=1&milestone=50",
+              "price": 1.25,
+              "minStake": 0.1,
+              "maxStake": 11524.8,
+              "probability": 0.745,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "no",
+              "params": "innings=1&milestone=50",
+              "marketUrl": "cricket.any_player_to_score_milestone.v2/no?innings=1&milestone=50",
+              "price": 3.65,
+              "minStake": 0.1,
+              "maxStake": 1087.24434,
+              "probability": 0.255,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            }
+          ]
+        }
+      }
+    },
+    "cricket.over_team_total": {
+      "submarkets": {
+        "team=away&period=over1": {
+          "sequence": "822",
+          "selections": [
+            {
+              "outcome": "over",
+              "params": "over=1&team=away&total=7.5",
+              "marketUrl": "cricket.over_team_total/over?over=1&team=away&total=7.5",
+              "price": 1.9,
+              "minStake": 0.1,
+              "maxStake": 2561.06634,
+              "probability": 0.493,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "under",
+              "params": "over=1&team=away&total=7.5",
+              "marketUrl": "cricket.over_team_total/under?over=1&team=away&total=7.5",
+              "price": 1.85,
+              "minStake": 0.1,
+              "maxStake": 2711.71684,
+              "probability": 0.507,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "over",
+              "params": "over=1&team=away&total=6.5",
+              "marketUrl": "cricket.over_team_total/over?over=1&team=away&total=6.5",
+              "price": 1.65,
+              "minStake": 0.1,
+              "maxStake": 3546.09178,
+              "probability": 0.577,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "under",
+              "params": "over=1&team=away&total=6.5",
+              "marketUrl": "cricket.over_team_total/under?over=1&team=away&total=6.5",
+              "price": 2.25,
+              "minStake": 0.1,
+              "maxStake": 1843.968,
+              "probability": 0.423,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            }
+          ]
+        },
+        "team=away&period=over2": {
+          "sequence": "822",
+          "selections": [
+            {
+              "outcome": "over",
+              "params": "over=2&team=away&total=8.5",
+              "marketUrl": "cricket.over_team_total/over?over=2&team=away&total=8.5",
+              "price": 1.85,
+              "minStake": 0.1,
+              "maxStake": 2711.71684,
+              "probability": 0.507,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "under",
+              "params": "over=2&team=away&total=8.5",
+              "marketUrl": "cricket.over_team_total/under?over=2&team=away&total=8.5",
+              "price": 1.9,
+              "minStake": 0.1,
+              "maxStake": 2561.06634,
+              "probability": 0.493,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "over",
+              "params": "over=2&team=away&total=7.5",
+              "marketUrl": "cricket.over_team_total/over?over=2&team=away&total=7.5",
+              "price": 1.6,
+              "minStake": 0.1,
+              "maxStake": 3841.6,
+              "probability": 0.584,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "under",
+              "params": "over=2&team=away&total=7.5",
+              "marketUrl": "cricket.over_team_total/under?over=2&team=away&total=7.5",
+              "price": 2.25,
+              "minStake": 0.1,
+              "maxStake": 1843.968,
+              "probability": 0.416,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            }
+          ]
+        },
+        "team=away&period=over3": {
+          "sequence": "822",
+          "selections": [
+            {
+              "outcome": "over",
+              "params": "over=3&team=away&total=9.5",
+              "marketUrl": "cricket.over_team_total/over?over=3&team=away&total=9.5",
+              "price": 1.95,
+              "minStake": 0.1,
+              "maxStake": 2426.27322,
+              "probability": 0.487,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "under",
+              "params": "over=3&team=away&total=9.5",
+              "marketUrl": "cricket.over_team_total/under?over=3&team=away&total=9.5",
+              "price": 1.85,
+              "minStake": 0.1,
+              "maxStake": 2711.71684,
+              "probability": 0.513,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "over",
+              "params": "over=3&team=away&total=8.5",
+              "marketUrl": "cricket.over_team_total/over?over=3&team=away&total=8.5",
+              "price": 1.7,
+              "minStake": 0.1,
+              "maxStake": 3292.8,
+              "probability": 0.558,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "under",
+              "params": "over=3&team=away&total=8.5",
+              "marketUrl": "cricket.over_team_total/under?over=3&team=away&total=8.5",
+              "price": 2.15,
+              "minStake": 0.1,
+              "maxStake": 2004.31266,
+              "probability": 0.442,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            }
+          ]
+        },
+        "team=away&period=over4": {
+          "sequence": "822",
+          "selections": [
+            {
+              "outcome": "over",
+              "params": "over=4&team=away&total=9.5",
+              "marketUrl": "cricket.over_team_total/over?over=4&team=away&total=9.5",
+              "price": 1.85,
+              "minStake": 0.1,
+              "maxStake": 2711.71684,
+              "probability": 0.507,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "under",
+              "params": "over=4&team=away&total=9.5",
+              "marketUrl": "cricket.over_team_total/under?over=4&team=away&total=9.5",
+              "price": 1.9,
+              "minStake": 0.1,
+              "maxStake": 2561.06634,
+              "probability": 0.493,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "over",
+              "params": "over=4&team=away&total=8.5",
+              "marketUrl": "cricket.over_team_total/over?over=4&team=away&total=8.5",
+              "price": 1.6,
+              "minStake": 0.1,
+              "maxStake": 3841.6,
+              "probability": 0.584,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "under",
+              "params": "over=4&team=away&total=8.5",
+              "marketUrl": "cricket.over_team_total/under?over=4&team=away&total=8.5",
+              "price": 2.25,
+              "minStake": 0.1,
+              "maxStake": 1843.968,
+              "probability": 0.416,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            }
+          ]
+        },
+        "team=away&period=over5": {
+          "sequence": "822",
+          "selections": [
+            {
+              "outcome": "over",
+              "params": "over=5&team=away&total=9.5",
+              "marketUrl": "cricket.over_team_total/over?over=5&team=away&total=9.5",
+              "price": 1.8,
+              "minStake": 0.1,
+              "maxStake": 2881.2,
+              "probability": 0.52,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "under",
+              "params": "over=5&team=away&total=9.5",
+              "marketUrl": "cricket.over_team_total/under?over=5&team=away&total=9.5",
+              "price": 1.95,
+              "minStake": 0.1,
+              "maxStake": 2426.27322,
+              "probability": 0.48,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "over",
+              "params": "over=5&team=away&total=8.5",
+              "marketUrl": "cricket.over_team_total/over?over=5&team=away&total=8.5",
+              "price": 1.6,
+              "minStake": 0.1,
+              "maxStake": 3841.6,
+              "probability": 0.59,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "under",
+              "params": "over=5&team=away&total=8.5",
+              "marketUrl": "cricket.over_team_total/under?over=5&team=away&total=8.5",
+              "price": 2.3,
+              "minStake": 0.1,
+              "maxStake": 1773.0454,
+              "probability": 0.41,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            }
+          ]
+        },
+        "team=away&period=over6": {
+          "sequence": "822",
+          "selections": [
+            {
+              "outcome": "over",
+              "params": "over=6&team=away&total=9.5",
+              "marketUrl": "cricket.over_team_total/over?over=6&team=away&total=9.5",
+              "price": 1.8,
+              "minStake": 0.1,
+              "maxStake": 2881.2,
+              "probability": 0.526,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "under",
+              "params": "over=6&team=away&total=9.5",
+              "marketUrl": "cricket.over_team_total/under?over=6&team=away&total=9.5",
+              "price": 2,
+              "minStake": 0.1,
+              "maxStake": 2304.96,
+              "probability": 0.474,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "over",
+              "params": "over=6&team=away&total=10.5",
+              "marketUrl": "cricket.over_team_total/over?over=6&team=away&total=10.5",
+              "price": 2.05,
+              "minStake": 0.1,
+              "maxStake": 2195.2,
+              "probability": 0.461,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "under",
+              "params": "over=6&team=away&total=10.5",
+              "marketUrl": "cricket.over_team_total/under?over=6&team=away&total=10.5",
+              "price": 1.75,
+              "minStake": 0.1,
+              "maxStake": 3073.28,
+              "probability": 0.539,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            }
+          ]
+        },
+        "team=home&period=over1": {
+          "sequence": "822",
+          "selections": [
+            {
+              "outcome": "over",
+              "params": "over=1&team=home&total=7.5",
+              "marketUrl": "cricket.over_team_total/over?over=1&team=home&total=7.5",
+              "price": 1.9,
+              "minStake": 0.1,
+              "maxStake": 2561.06634,
+              "probability": 0.5,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "under",
+              "params": "over=1&team=home&total=7.5",
+              "marketUrl": "cricket.over_team_total/under?over=1&team=home&total=7.5",
+              "price": 1.9,
+              "minStake": 0.1,
+              "maxStake": 2561.06634,
+              "probability": 0.5,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "over",
+              "params": "over=1&team=home&total=6.5",
+              "marketUrl": "cricket.over_team_total/over?over=1&team=home&total=6.5",
+              "price": 1.6,
+              "minStake": 0.1,
+              "maxStake": 3841.6,
+              "probability": 0.59,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "under",
+              "params": "over=1&team=home&total=6.5",
+              "marketUrl": "cricket.over_team_total/under?over=1&team=home&total=6.5",
+              "price": 2.3,
+              "minStake": 0.1,
+              "maxStake": 1773.0454,
+              "probability": 0.41,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            }
+          ]
+        },
+        "team=home&period=over2": {
+          "sequence": "822",
+          "selections": [
+            {
+              "outcome": "over",
+              "params": "over=2&team=home&total=8.5",
+              "marketUrl": "cricket.over_team_total/over?over=2&team=home&total=8.5",
+              "price": 1.85,
+              "minStake": 0.1,
+              "maxStake": 2711.71684,
+              "probability": 0.507,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "under",
+              "params": "over=2&team=home&total=8.5",
+              "marketUrl": "cricket.over_team_total/under?over=2&team=home&total=8.5",
+              "price": 1.9,
+              "minStake": 0.1,
+              "maxStake": 2561.06634,
+              "probability": 0.493,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "over",
+              "params": "over=2&team=home&total=7.5",
+              "marketUrl": "cricket.over_team_total/over?over=2&team=home&total=7.5",
+              "price": 1.6,
+              "minStake": 0.1,
+              "maxStake": 3841.6,
+              "probability": 0.584,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "under",
+              "params": "over=2&team=home&total=7.5",
+              "marketUrl": "cricket.over_team_total/under?over=2&team=home&total=7.5",
+              "price": 2.25,
+              "minStake": 0.1,
+              "maxStake": 1843.968,
+              "probability": 0.416,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            }
+          ]
+        },
+        "team=home&period=over3": {
+          "sequence": "822",
+          "selections": [
+            {
+              "outcome": "over",
+              "params": "over=3&team=home&total=9.5",
+              "marketUrl": "cricket.over_team_total/over?over=3&team=home&total=9.5",
+              "price": 1.95,
+              "minStake": 0.1,
+              "maxStake": 2426.27322,
+              "probability": 0.487,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "under",
+              "params": "over=3&team=home&total=9.5",
+              "marketUrl": "cricket.over_team_total/under?over=3&team=home&total=9.5",
+              "price": 1.85,
+              "minStake": 0.1,
+              "maxStake": 2711.71684,
+              "probability": 0.513,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "over",
+              "params": "over=3&team=home&total=8.5",
+              "marketUrl": "cricket.over_team_total/over?over=3&team=home&total=8.5",
+              "price": 1.7,
+              "minStake": 0.1,
+              "maxStake": 3292.8,
+              "probability": 0.558,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "under",
+              "params": "over=3&team=home&total=8.5",
+              "marketUrl": "cricket.over_team_total/under?over=3&team=home&total=8.5",
+              "price": 2.15,
+              "minStake": 0.1,
+              "maxStake": 2004.31266,
+              "probability": 0.442,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            }
+          ]
+        },
+        "team=home&period=over4": {
+          "sequence": "822",
+          "selections": [
+            {
+              "outcome": "over",
+              "params": "over=4&team=home&total=9.5",
+              "marketUrl": "cricket.over_team_total/over?over=4&team=home&total=9.5",
+              "price": 1.85,
+              "minStake": 0.1,
+              "maxStake": 2711.71684,
+              "probability": 0.513,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "under",
+              "params": "over=4&team=home&total=9.5",
+              "marketUrl": "cricket.over_team_total/under?over=4&team=home&total=9.5",
+              "price": 1.95,
+              "minStake": 0.1,
+              "maxStake": 2426.27322,
+              "probability": 0.487,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "over",
+              "params": "over=4&team=home&total=8.5",
+              "marketUrl": "cricket.over_team_total/over?over=4&team=home&total=8.5",
+              "price": 1.6,
+              "minStake": 0.1,
+              "maxStake": 3841.6,
+              "probability": 0.584,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "under",
+              "params": "over=4&team=home&total=8.5",
+              "marketUrl": "cricket.over_team_total/under?over=4&team=home&total=8.5",
+              "price": 2.25,
+              "minStake": 0.1,
+              "maxStake": 1843.968,
+              "probability": 0.416,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            }
+          ]
+        },
+        "team=home&period=over5": {
+          "sequence": "822",
+          "selections": [
+            {
+              "outcome": "over",
+              "params": "over=5&team=home&total=9.5",
+              "marketUrl": "cricket.over_team_total/over?over=5&team=home&total=9.5",
+              "price": 1.8,
+              "minStake": 0.1,
+              "maxStake": 2881.2,
+              "probability": 0.52,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "under",
+              "params": "over=5&team=home&total=9.5",
+              "marketUrl": "cricket.over_team_total/under?over=5&team=home&total=9.5",
+              "price": 1.95,
+              "minStake": 0.1,
+              "maxStake": 2426.27322,
+              "probability": 0.48,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "over",
+              "params": "over=5&team=home&total=8.5",
+              "marketUrl": "cricket.over_team_total/over?over=5&team=home&total=8.5",
+              "price": 1.6,
+              "minStake": 0.1,
+              "maxStake": 3841.6,
+              "probability": 0.59,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "under",
+              "params": "over=5&team=home&total=8.5",
+              "marketUrl": "cricket.over_team_total/under?over=5&team=home&total=8.5",
+              "price": 2.3,
+              "minStake": 0.1,
+              "maxStake": 1773.0454,
+              "probability": 0.41,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            }
+          ]
+        },
+        "team=home&period=over6": {
+          "sequence": "822",
+          "selections": [
+            {
+              "outcome": "over",
+              "params": "over=6&team=home&total=9.5",
+              "marketUrl": "cricket.over_team_total/over?over=6&team=home&total=9.5",
+              "price": 1.8,
+              "minStake": 0.1,
+              "maxStake": 2881.2,
+              "probability": 0.526,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "under",
+              "params": "over=6&team=home&total=9.5",
+              "marketUrl": "cricket.over_team_total/under?over=6&team=home&total=9.5",
+              "price": 2,
+              "minStake": 0.1,
+              "maxStake": 2304.96,
+              "probability": 0.474,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "over",
+              "params": "over=6&team=home&total=10.5",
+              "marketUrl": "cricket.over_team_total/over?over=6&team=home&total=10.5",
+              "price": 2.05,
+              "minStake": 0.1,
+              "maxStake": 2195.2,
+              "probability": 0.461,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "under",
+              "params": "over=6&team=home&total=10.5",
+              "marketUrl": "cricket.over_team_total/under?over=6&team=home&total=10.5",
+              "price": 1.75,
+              "minStake": 0.1,
+              "maxStake": 3073.28,
+              "probability": 0.539,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            }
+          ]
+        }
+      }
+    },
+    "cricket.player_to_score_milestone": {
+      "submarkets": {
+        "period=ft&player=c14f9a-nitish-rana&milestone=50": {
+          "sequence": "822",
+          "selections": [
+            {
+              "outcome": "yes",
+              "params": "milestone=50&player=c14f9a-nitish-rana",
+              "marketUrl": "cricket.player_to_score_milestone/yes?milestone=50&player=c14f9a-nitish-rana",
+              "price": 4.15,
+              "minStake": 0.1,
+              "maxStake": 914.66634,
+              "probability": 0.224,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "no",
+              "params": "milestone=50&player=c14f9a-nitish-rana",
+              "marketUrl": "cricket.player_to_score_milestone/no?milestone=50&player=c14f9a-nitish-rana",
+              "price": 1.2,
+              "minStake": 0.1,
+              "maxStake": 14406,
+              "probability": 0.776,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            }
+          ]
+        },
+        "period=ft&player=c1a5c70-ajinkya-rahane&milestone=50": {
+          "sequence": "822",
+          "selections": [
+            {
+              "outcome": "yes",
+              "params": "milestone=50&player=c1a5c70-ajinkya-rahane",
+              "marketUrl": "cricket.player_to_score_milestone/yes?milestone=50&player=c1a5c70-ajinkya-rahane",
+              "price": 4.05,
+              "minStake": 0.1,
+              "maxStake": 944.65532,
+              "probability": 0.231,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "no",
+              "params": "milestone=50&player=c1a5c70-ajinkya-rahane",
+              "marketUrl": "cricket.player_to_score_milestone/no?milestone=50&player=c1a5c70-ajinkya-rahane",
+              "price": 1.22,
+              "minStake": 0.1,
+              "maxStake": 13096.36328,
+              "probability": 0.769,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            }
+          ]
+        },
+        "period=ft&player=c1a5ffa-karun-nair&milestone=50": {
+          "sequence": "822",
+          "selections": [
+            {
+              "outcome": "yes",
+              "params": "milestone=50&player=c1a5ffa-karun-nair",
+              "marketUrl": "cricket.player_to_score_milestone/yes?milestone=50&player=c1a5ffa-karun-nair",
+              "price": 5.6,
+              "minStake": 0.1,
+              "maxStake": 626.3474,
+              "probability": 0.167,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "no",
+              "params": "milestone=50&player=c1a5ffa-karun-nair",
+              "marketUrl": "cricket.player_to_score_milestone/no?milestone=50&player=c1a5ffa-karun-nair",
+              "price": 1.12,
+              "minStake": 0.1,
+              "maxStake": 24010,
+              "probability": 0.833,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            }
+          ]
+        },
+        "period=ft&player=c5fad3-pathum-nissanka&milestone=50": {
+          "sequence": "822",
+          "selections": [
+            {
+              "outcome": "yes",
+              "params": "milestone=50&player=c5fad3-pathum-nissanka",
+              "marketUrl": "cricket.player_to_score_milestone/yes?milestone=50&player=c5fad3-pathum-nissanka",
+              "price": 3.85,
+              "minStake": 0.1,
+              "maxStake": 1010.94644,
+              "probability": 0.245,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "no",
+              "params": "milestone=50&player=c5fad3-pathum-nissanka",
+              "marketUrl": "cricket.player_to_score_milestone/no?milestone=50&player=c5fad3-pathum-nissanka",
+              "price": 1.25,
+              "minStake": 0.1,
+              "maxStake": 11524.8,
+              "probability": 0.755,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            }
+          ]
+        },
+        "period=ft&player=cae3ed-finn-allen&milestone=50": {
+          "sequence": "822",
+          "selections": [
+            {
+              "outcome": "yes",
+              "params": "milestone=50&player=cae3ed-finn-allen",
+              "marketUrl": "cricket.player_to_score_milestone/yes?milestone=50&player=cae3ed-finn-allen",
+              "price": 3.9,
+              "minStake": 0.1,
+              "maxStake": 993.51714,
+              "probability": 0.238,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "no",
+              "params": "milestone=50&player=cae3ed-finn-allen",
+              "marketUrl": "cricket.player_to_score_milestone/no?milestone=50&player=cae3ed-finn-allen",
+              "price": 1.22,
+              "minStake": 0.1,
+              "maxStake": 13096.36328,
+              "probability": 0.762,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            }
+          ]
+        },
+        "period=ft&player=cae73d-cameron-green&milestone=50": {
+          "sequence": "822",
+          "selections": [
+            {
+              "outcome": "yes",
+              "params": "milestone=50&player=cae73d-cameron-green",
+              "marketUrl": "cricket.player_to_score_milestone/yes?milestone=50&player=cae73d-cameron-green",
+              "price": 4.05,
+              "minStake": 0.1,
+              "maxStake": 944.65532,
+              "probability": 0.231,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "no",
+              "params": "milestone=50&player=cae73d-cameron-green",
+              "marketUrl": "cricket.player_to_score_milestone/no?milestone=50&player=cae73d-cameron-green",
+              "price": 1.22,
+              "minStake": 0.1,
+              "maxStake": 13096.36328,
+              "probability": 0.769,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            }
+          ]
+        },
+        "period=ft&player=cb4cb7-kl-rahul&milestone=50": {
+          "sequence": "822",
+          "selections": [
+            {
+              "outcome": "yes",
+              "params": "milestone=50&player=cb4cb7-kl-rahul",
+              "marketUrl": "cricket.player_to_score_milestone/yes?milestone=50&player=cb4cb7-kl-rahul",
+              "price": 2.55,
+              "minStake": 0.1,
+              "maxStake": 1858.83852,
+              "probability": 0.366,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "no",
+              "params": "milestone=50&player=cb4cb7-kl-rahul",
+              "marketUrl": "cricket.player_to_score_milestone/no?milestone=50&player=cb4cb7-kl-rahul",
+              "price": 1.47,
+              "minStake": 0.1,
+              "maxStake": 6130.21262,
+              "probability": 0.634,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            }
+          ]
+        },
+        "period=ft&player=cec84d-angkrish-avaneesh-raghuvanshi&milestone=50": {
+          "sequence": "822",
+          "selections": [
+            {
+              "outcome": "yes",
+              "params": "milestone=50&player=cec84d-angkrish-avaneesh-raghuvanshi",
+              "marketUrl": "cricket.player_to_score_milestone/yes?milestone=50&player=cec84d-angkrish-avaneesh-raghuvanshi",
+              "price": 4.2,
+              "minStake": 0.1,
+              "maxStake": 900.375,
+              "probability": 0.222,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "no",
+              "params": "milestone=50&player=cec84d-angkrish-avaneesh-raghuvanshi",
+              "marketUrl": "cricket.player_to_score_milestone/no?milestone=50&player=cec84d-angkrish-avaneesh-raghuvanshi",
+              "price": 1.2,
+              "minStake": 0.1,
+              "maxStake": 14406,
+              "probability": 0.778,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            }
+          ]
+        }
+      }
+    },
+    "cricket.player_total": {
+      "submarkets": {
+        "period=ft&player=c14f9a-nitish-rana": {
+          "sequence": "822",
+          "selections": [
+            {
+              "outcome": "over",
+              "params": "player=c14f9a-nitish-rana&total=21.5",
+              "marketUrl": "cricket.player_total/over?player=c14f9a-nitish-rana&total=21.5",
+              "price": 1.85,
+              "minStake": 0.1,
+              "maxStake": 2711.71684,
+              "probability": 0.5,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "under",
+              "params": "player=c14f9a-nitish-rana&total=21.5",
+              "marketUrl": "cricket.player_total/under?player=c14f9a-nitish-rana&total=21.5",
+              "price": 1.85,
+              "minStake": 0.1,
+              "maxStake": 2711.71684,
+              "probability": 0.5,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            }
+          ]
+        },
+        "period=ft&player=c1a5c70-ajinkya-rahane": {
+          "sequence": "822",
+          "selections": [
+            {
+              "outcome": "over",
+              "params": "player=c1a5c70-ajinkya-rahane&total=22.5",
+              "marketUrl": "cricket.player_total/over?player=c1a5c70-ajinkya-rahane&total=22.5",
+              "price": 1.85,
+              "minStake": 0.1,
+              "maxStake": 2711.71684,
+              "probability": 0.5,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "under",
+              "params": "player=c1a5c70-ajinkya-rahane&total=22.5",
+              "marketUrl": "cricket.player_total/under?player=c1a5c70-ajinkya-rahane&total=22.5",
+              "price": 1.85,
+              "minStake": 0.1,
+              "maxStake": 2711.71684,
+              "probability": 0.5,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            }
+          ]
+        },
+        "period=ft&player=c1a5cda-david-miller": {
+          "sequence": "822",
+          "selections": [
+            {
+              "outcome": "over",
+              "params": "player=c1a5cda-david-miller&total=19.5",
+              "marketUrl": "cricket.player_total/over?player=c1a5cda-david-miller&total=19.5",
+              "price": 1.85,
+              "minStake": 0.1,
+              "maxStake": 2711.71684,
+              "probability": 0.5,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "under",
+              "params": "player=c1a5cda-david-miller&total=19.5",
+              "marketUrl": "cricket.player_total/under?player=c1a5cda-david-miller&total=19.5",
+              "price": 1.85,
+              "minStake": 0.1,
+              "maxStake": 2711.71684,
+              "probability": 0.5,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            }
+          ]
+        },
+        "period=ft&player=c1a5ffa-karun-nair": {
+          "sequence": "822",
+          "selections": [
+            {
+              "outcome": "over",
+              "params": "player=c1a5ffa-karun-nair&total=17.5",
+              "marketUrl": "cricket.player_total/over?player=c1a5ffa-karun-nair&total=17.5",
+              "price": 1.85,
+              "minStake": 0.1,
+              "maxStake": 2711.71684,
+              "probability": 0.5,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "under",
+              "params": "player=c1a5ffa-karun-nair&total=17.5",
+              "marketUrl": "cricket.player_total/under?player=c1a5ffa-karun-nair&total=17.5",
+              "price": 1.85,
+              "minStake": 0.1,
+              "maxStake": 2711.71684,
+              "probability": 0.5,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            }
+          ]
+        },
+        "period=ft&player=c5fad3-pathum-nissanka": {
+          "sequence": "822",
+          "selections": [
+            {
+              "outcome": "over",
+              "params": "player=c5fad3-pathum-nissanka&total=22.5",
+              "marketUrl": "cricket.player_total/over?player=c5fad3-pathum-nissanka&total=22.5",
+              "price": 1.85,
+              "minStake": 0.1,
+              "maxStake": 2711.71684,
+              "probability": 0.5,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "under",
+              "params": "player=c5fad3-pathum-nissanka&total=22.5",
+              "marketUrl": "cricket.player_total/under?player=c5fad3-pathum-nissanka&total=22.5",
+              "price": 1.85,
+              "minStake": 0.1,
+              "maxStake": 2711.71684,
+              "probability": 0.5,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            }
+          ]
+        },
+        "period=ft&player=c768b6-singh-rinku": {
+          "sequence": "822",
+          "selections": [
+            {
+              "outcome": "over",
+              "params": "player=c768b6-singh-rinku&total=21.5",
+              "marketUrl": "cricket.player_total/over?player=c768b6-singh-rinku&total=21.5",
+              "price": 1.85,
+              "minStake": 0.1,
+              "maxStake": 2711.71684,
+              "probability": 0.5,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "under",
+              "params": "player=c768b6-singh-rinku&total=21.5",
+              "marketUrl": "cricket.player_total/under?player=c768b6-singh-rinku&total=21.5",
+              "price": 1.85,
+              "minStake": 0.1,
+              "maxStake": 2711.71684,
+              "probability": 0.5,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            }
+          ]
+        },
+        "period=ft&player=c7e316-ravindra-rachin": {
+          "sequence": "822",
+          "selections": [
+            {
+              "outcome": "over",
+              "params": "player=c7e316-ravindra-rachin&total=20.5",
+              "marketUrl": "cricket.player_total/over?player=c7e316-ravindra-rachin&total=20.5",
+              "price": 1.85,
+              "minStake": 0.1,
+              "maxStake": 2711.71684,
+              "probability": 0.5,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "under",
+              "params": "player=c7e316-ravindra-rachin&total=20.5",
+              "marketUrl": "cricket.player_total/under?player=c7e316-ravindra-rachin&total=20.5",
+              "price": 1.85,
+              "minStake": 0.1,
+              "maxStake": 2711.71684,
+              "probability": 0.5,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            }
+          ]
+        },
+        "period=ft&player=cac639-ramandeep-singh": {
+          "sequence": "822",
+          "selections": [
+            {
+              "outcome": "over",
+              "params": "player=cac639-ramandeep-singh&total=21.5",
+              "marketUrl": "cricket.player_total/over?player=cac639-ramandeep-singh&total=21.5",
+              "price": 1.85,
+              "minStake": 0.1,
+              "maxStake": 2711.71684,
+              "probability": 0.5,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "under",
+              "params": "player=cac639-ramandeep-singh&total=21.5",
+              "marketUrl": "cricket.player_total/under?player=cac639-ramandeep-singh&total=21.5",
+              "price": 1.85,
+              "minStake": 0.1,
+              "maxStake": 2711.71684,
+              "probability": 0.5,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            }
+          ]
+        },
+        "period=ft&player=cac659-sameer-rizvi": {
+          "sequence": "822",
+          "selections": [
+            {
+              "outcome": "over",
+              "params": "player=cac659-sameer-rizvi&total=20.5",
+              "marketUrl": "cricket.player_total/over?player=cac659-sameer-rizvi&total=20.5",
+              "price": 1.85,
+              "minStake": 0.1,
+              "maxStake": 2711.71684,
+              "probability": 0.5,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "under",
+              "params": "player=cac659-sameer-rizvi&total=20.5",
+              "marketUrl": "cricket.player_total/under?player=cac659-sameer-rizvi&total=20.5",
+              "price": 1.85,
+              "minStake": 0.1,
+              "maxStake": 2711.71684,
+              "probability": 0.5,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            }
+          ]
+        },
+        "period=ft&player=cae3ed-finn-allen": {
+          "sequence": "822",
+          "selections": [
+            {
+              "outcome": "over",
+              "params": "player=cae3ed-finn-allen&total=23.5",
+              "marketUrl": "cricket.player_total/over?player=cae3ed-finn-allen&total=23.5",
+              "price": 1.85,
+              "minStake": 0.1,
+              "maxStake": 2711.71684,
+              "probability": 0.5,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "under",
+              "params": "player=cae3ed-finn-allen&total=23.5",
+              "marketUrl": "cricket.player_total/under?player=cae3ed-finn-allen&total=23.5",
+              "price": 1.85,
+              "minStake": 0.1,
+              "maxStake": 2711.71684,
+              "probability": 0.5,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            }
+          ]
+        },
+        "period=ft&player=cae73d-cameron-green": {
+          "sequence": "822",
+          "selections": [
+            {
+              "outcome": "over",
+              "params": "player=cae73d-cameron-green&total=23.5",
+              "marketUrl": "cricket.player_total/over?player=cae73d-cameron-green&total=23.5",
+              "price": 1.85,
+              "minStake": 0.1,
+              "maxStake": 2711.71684,
+              "probability": 0.5,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "under",
+              "params": "player=cae73d-cameron-green&total=23.5",
+              "marketUrl": "cricket.player_total/under?player=cae73d-cameron-green&total=23.5",
+              "price": 1.85,
+              "minStake": 0.1,
+              "maxStake": 2711.71684,
+              "probability": 0.5,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            }
+          ]
+        },
+        "period=ft&player=cb02be-tristan-stubbs": {
+          "sequence": "822",
+          "selections": [
+            {
+              "outcome": "over",
+              "params": "player=cb02be-tristan-stubbs&total=19.5",
+              "marketUrl": "cricket.player_total/over?player=cb02be-tristan-stubbs&total=19.5",
+              "price": 1.85,
+              "minStake": 0.1,
+              "maxStake": 2711.71684,
+              "probability": 0.5,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "under",
+              "params": "player=cb02be-tristan-stubbs&total=19.5",
+              "marketUrl": "cricket.player_total/under?player=cb02be-tristan-stubbs&total=19.5",
+              "price": 1.85,
+              "minStake": 0.1,
+              "maxStake": 2711.71684,
+              "probability": 0.5,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            }
+          ]
+        },
+        "period=ft&player=cb4cb7-kl-rahul": {
+          "sequence": "822",
+          "selections": [
+            {
+              "outcome": "over",
+              "params": "player=cb4cb7-kl-rahul&total=31.5",
+              "marketUrl": "cricket.player_total/over?player=cb4cb7-kl-rahul&total=31.5",
+              "price": 1.85,
+              "minStake": 0.1,
+              "maxStake": 2711.71684,
+              "probability": 0.5,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "under",
+              "params": "player=cb4cb7-kl-rahul&total=31.5",
+              "marketUrl": "cricket.player_total/under?player=cb4cb7-kl-rahul&total=31.5",
+              "price": 1.85,
+              "minStake": 0.1,
+              "maxStake": 2711.71684,
+              "probability": 0.5,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            }
+          ]
+        },
+        "period=ft&player=cc690c-abhishek-porel": {
+          "sequence": "822",
+          "selections": [
+            {
+              "outcome": "over",
+              "params": "player=cc690c-abhishek-porel&total=20.5",
+              "marketUrl": "cricket.player_total/over?player=cc690c-abhishek-porel&total=20.5",
+              "price": 1.85,
+              "minStake": 0.1,
+              "maxStake": 2711.71684,
+              "probability": 0.5,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "under",
+              "params": "player=cc690c-abhishek-porel&total=20.5",
+              "marketUrl": "cricket.player_total/under?player=cc690c-abhishek-porel&total=20.5",
+              "price": 1.85,
+              "minStake": 0.1,
+              "maxStake": 2711.71684,
+              "probability": 0.5,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            }
+          ]
+        },
+        "period=ft&player=cec84d-angkrish-avaneesh-raghuvanshi": {
+          "sequence": "822",
+          "selections": [
+            {
+              "outcome": "over",
+              "params": "player=cec84d-angkrish-avaneesh-raghuvanshi&total=22.5",
+              "marketUrl": "cricket.player_total/over?player=cec84d-angkrish-avaneesh-raghuvanshi&total=22.5",
+              "price": 1.85,
+              "minStake": 0.1,
+              "maxStake": 2711.71684,
+              "probability": 0.5,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "under",
+              "params": "player=cec84d-angkrish-avaneesh-raghuvanshi&total=22.5",
+              "marketUrl": "cricket.player_total/under?player=cec84d-angkrish-avaneesh-raghuvanshi&total=22.5",
+              "price": 1.85,
+              "minStake": 0.1,
+              "maxStake": 2711.71684,
+              "probability": 0.5,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            }
+          ]
+        }
+      }
+    },
+    "cricket.player_total_player_performance": {
+      "submarkets": {
+        "period=ft&player=c14f9a-nitish-rana": {
+          "sequence": "822",
+          "selections": [
+            {
+              "outcome": "over",
+              "params": "player=c14f9a-nitish-rana&total=24.5",
+              "marketUrl": "cricket.player_total_player_performance/over?player=c14f9a-nitish-rana&total=24.5",
+              "price": 1.85,
+              "minStake": 0.1,
+              "maxStake": 3389.64654,
+              "probability": 0.5,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "under",
+              "params": "player=c14f9a-nitish-rana&total=24.5",
+              "marketUrl": "cricket.player_total_player_performance/under?player=c14f9a-nitish-rana&total=24.5",
+              "price": 1.85,
+              "minStake": 0.1,
+              "maxStake": 3389.64654,
+              "probability": 0.5,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            }
+          ]
+        },
+        "period=ft&player=c1a5c70-ajinkya-rahane": {
+          "sequence": "822",
+          "selections": [
+            {
+              "outcome": "over",
+              "params": "player=c1a5c70-ajinkya-rahane&total=26.5",
+              "marketUrl": "cricket.player_total_player_performance/over?player=c1a5c70-ajinkya-rahane&total=26.5",
+              "price": 1.85,
+              "minStake": 0.1,
+              "maxStake": 3389.64654,
+              "probability": 0.5,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "under",
+              "params": "player=c1a5c70-ajinkya-rahane&total=26.5",
+              "marketUrl": "cricket.player_total_player_performance/under?player=c1a5c70-ajinkya-rahane&total=26.5",
+              "price": 1.85,
+              "minStake": 0.1,
+              "maxStake": 3389.64654,
+              "probability": 0.5,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            }
+          ]
+        },
+        "period=ft&player=c36573-kuldeep-yadav": {
+          "sequence": "822",
+          "selections": [
+            {
+              "outcome": "over",
+              "params": "player=c36573-kuldeep-yadav&total=20.5",
+              "marketUrl": "cricket.player_total_player_performance/over?player=c36573-kuldeep-yadav&total=20.5",
+              "price": 1.9,
+              "minStake": 0.1,
+              "maxStake": 3201.33268,
+              "probability": 0.493,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "under",
+              "params": "player=c36573-kuldeep-yadav&total=20.5",
+              "marketUrl": "cricket.player_total_player_performance/under?player=c36573-kuldeep-yadav&total=20.5",
+              "price": 1.85,
+              "minStake": 0.1,
+              "maxStake": 3389.64654,
+              "probability": 0.507,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            }
+          ]
+        },
+        "period=ft&player=c4c00c-lungisani-ngidi": {
+          "sequence": "822",
+          "selections": [
+            {
+              "outcome": "over",
+              "params": "player=c4c00c-lungisani-ngidi&total=20.5",
+              "marketUrl": "cricket.player_total_player_performance/over?player=c4c00c-lungisani-ngidi&total=20.5",
+              "price": 1.85,
+              "minStake": 0.1,
+              "maxStake": 3389.64654,
+              "probability": 0.5,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "under",
+              "params": "player=c4c00c-lungisani-ngidi&total=20.5",
+              "marketUrl": "cricket.player_total_player_performance/under?player=c4c00c-lungisani-ngidi&total=20.5",
+              "price": 1.85,
+              "minStake": 0.1,
+              "maxStake": 3389.64654,
+              "probability": 0.5,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            }
+          ]
+        },
+        "period=ft&player=c5fad3-pathum-nissanka": {
+          "sequence": "822",
+          "selections": [
+            {
+              "outcome": "over",
+              "params": "player=c5fad3-pathum-nissanka&total=26.5",
+              "marketUrl": "cricket.player_total_player_performance/over?player=c5fad3-pathum-nissanka&total=26.5",
+              "price": 1.85,
+              "minStake": 0.1,
+              "maxStake": 3389.64654,
+              "probability": 0.5,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "under",
+              "params": "player=c5fad3-pathum-nissanka&total=26.5",
+              "marketUrl": "cricket.player_total_player_performance/under?player=c5fad3-pathum-nissanka&total=26.5",
+              "price": 1.85,
+              "minStake": 0.1,
+              "maxStake": 3389.64654,
+              "probability": 0.5,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            }
+          ]
+        },
+        "period=ft&player=ca4b91-varun-chakravarthy": {
+          "sequence": "822",
+          "selections": [
+            {
+              "outcome": "over",
+              "params": "player=ca4b91-varun-chakravarthy&total=20.5",
+              "marketUrl": "cricket.player_total_player_performance/over?player=ca4b91-varun-chakravarthy&total=20.5",
+              "price": 2.1,
+              "minStake": 0.1,
+              "maxStake": 2619.27246,
+              "probability": 0.44,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "under",
+              "params": "player=ca4b91-varun-chakravarthy&total=20.5",
+              "marketUrl": "cricket.player_total_player_performance/under?player=ca4b91-varun-chakravarthy&total=20.5",
+              "price": 1.65,
+              "minStake": 0.1,
+              "maxStake": 4432.61448,
+              "probability": 0.56,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            }
+          ]
+        },
+        "period=ft&player=cadbeb-vaibhav-arora": {
+          "sequence": "822",
+          "selections": [
+            {
+              "outcome": "over",
+              "params": "player=cadbeb-vaibhav-arora&total=20.5",
+              "marketUrl": "cricket.player_total_player_performance/over?player=cadbeb-vaibhav-arora&total=20.5",
+              "price": 2.4,
+              "minStake": 0.1,
+              "maxStake": 2058,
+              "probability": 0.388,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "under",
+              "params": "player=cadbeb-vaibhav-arora&total=20.5",
+              "marketUrl": "cricket.player_total_player_performance/under?player=cadbeb-vaibhav-arora&total=20.5",
+              "price": 1.52,
+              "minStake": 0.1,
+              "maxStake": 5540.76908,
+              "probability": 0.612,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            }
+          ]
+        },
+        "period=ft&player=cae3ed-finn-allen": {
+          "sequence": "822",
+          "selections": [
+            {
+              "outcome": "over",
+              "params": "player=cae3ed-finn-allen&total=28.5",
+              "marketUrl": "cricket.player_total_player_performance/over?player=cae3ed-finn-allen&total=28.5",
+              "price": 1.9,
+              "minStake": 0.1,
+              "maxStake": 3201.33268,
+              "probability": 0.493,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "under",
+              "params": "player=cae3ed-finn-allen&total=28.5",
+              "marketUrl": "cricket.player_total_player_performance/under?player=cae3ed-finn-allen&total=28.5",
+              "price": 1.85,
+              "minStake": 0.1,
+              "maxStake": 3389.64654,
+              "probability": 0.507,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            }
+          ]
+        },
+        "period=ft&player=cb4cb7-kl-rahul": {
+          "sequence": "822",
+          "selections": [
+            {
+              "outcome": "over",
+              "params": "player=cb4cb7-kl-rahul&total=47.5",
+              "marketUrl": "cricket.player_total_player_performance/over?player=cb4cb7-kl-rahul&total=47.5",
+              "price": 1.85,
+              "minStake": 0.1,
+              "maxStake": 3389.64654,
+              "probability": 0.5,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "under",
+              "params": "player=cb4cb7-kl-rahul&total=47.5",
+              "marketUrl": "cricket.player_total_player_performance/under?player=cb4cb7-kl-rahul&total=47.5",
+              "price": 1.85,
+              "minStake": 0.1,
+              "maxStake": 3389.64654,
+              "probability": 0.5,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            }
+          ]
+        },
+        "period=ft&player=cec84d-angkrish-avaneesh-raghuvanshi": {
+          "sequence": "822",
+          "selections": [
+            {
+              "outcome": "over",
+              "params": "player=cec84d-angkrish-avaneesh-raghuvanshi&total=37.5",
+              "marketUrl": "cricket.player_total_player_performance/over?player=cec84d-angkrish-avaneesh-raghuvanshi&total=37.5",
+              "price": 1.9,
+              "minStake": 0.1,
+              "maxStake": 3201.33268,
+              "probability": 0.493,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "under",
+              "params": "player=cec84d-angkrish-avaneesh-raghuvanshi&total=37.5",
+              "marketUrl": "cricket.player_total_player_performance/under?player=cec84d-angkrish-avaneesh-raghuvanshi&total=37.5",
+              "price": 1.85,
+              "minStake": 0.1,
+              "maxStake": 3389.64654,
+              "probability": 0.507,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            }
+          ]
+        }
+      }
+    },
+    "cricket.team_total_at_dismissal": {
+      "submarkets": {
+        "period=ft&team=away&dismissal=1": {
+          "sequence": "822",
+          "selections": [
+            {
+              "outcome": "over",
+              "params": "dismissal=1&team=away&total=23.5",
+              "marketUrl": "cricket.team_total_at_dismissal/over?dismissal=1&team=away&total=23.5",
+              "price": 1.85,
+              "minStake": 0.1,
+              "maxStake": 3389.64654,
+              "probability": 0.5,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "under",
+              "params": "dismissal=1&team=away&total=23.5",
+              "marketUrl": "cricket.team_total_at_dismissal/under?dismissal=1&team=away&total=23.5",
+              "price": 1.85,
+              "minStake": 0.1,
+              "maxStake": 3389.64654,
+              "probability": 0.5,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            }
+          ]
+        },
+        "period=ft&team=home&dismissal=1": {
+          "sequence": "822",
+          "selections": [
+            {
+              "outcome": "over",
+              "params": "dismissal=1&team=home&total=28.5",
+              "marketUrl": "cricket.team_total_at_dismissal/over?dismissal=1&team=home&total=28.5",
+              "price": 1.85,
+              "minStake": 0.1,
+              "maxStake": 3389.64654,
+              "probability": 0.5,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "under",
+              "params": "dismissal=1&team=home&total=28.5",
+              "marketUrl": "cricket.team_total_at_dismissal/under?dismissal=1&team=home&total=28.5",
+              "price": 1.85,
+              "minStake": 0.1,
+              "maxStake": 3389.64654,
+              "probability": 0.5,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            }
+          ]
+        }
+      }
+    },
+    "cricket.team_total_fours": {
+      "submarkets": {
+        "period=ft&team=away": {
+          "sequence": "822",
+          "selections": [
+            {
+              "outcome": "over",
+              "params": "team=away&total=15.5",
+              "marketUrl": "cricket.team_total_fours/over?team=away&total=15.5",
+              "price": 1.75,
+              "minStake": 0.1,
+              "maxStake": 3841.6,
+              "probability": 0.527,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "under",
+              "params": "team=away&total=15.5",
+              "marketUrl": "cricket.team_total_fours/under?team=away&total=15.5",
+              "price": 1.95,
+              "minStake": 0.1,
+              "maxStake": 3032.84128,
+              "probability": 0.473,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            }
+          ]
+        },
+        "period=ft&team=home": {
+          "sequence": "822",
+          "selections": [
+            {
+              "outcome": "over",
+              "params": "team=home&total=15.5",
+              "marketUrl": "cricket.team_total_fours/over?team=home&total=15.5",
+              "price": 1.75,
+              "minStake": 0.1,
+              "maxStake": 3841.6,
+              "probability": 0.527,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "under",
+              "params": "team=home&total=15.5",
+              "marketUrl": "cricket.team_total_fours/under?team=home&total=15.5",
+              "price": 1.95,
+              "minStake": 0.1,
+              "maxStake": 3032.84128,
+              "probability": 0.473,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            }
+          ]
+        }
+      }
+    },
+    "cricket.team_total_from_0_over_to_x_over": {
+      "submarkets": {
+        "period=ft&to_over=10&team=away": {
+          "sequence": "822",
+          "selections": [
+            {
+              "outcome": "over",
+              "params": "team=away&to_over=10&total=90.5",
+              "marketUrl": "cricket.team_total_from_0_over_to_x_over/over?team=away&to_over=10&total=90.5",
+              "price": 1.8,
+              "minStake": 0.1,
+              "maxStake": 3601.5,
+              "probability": 0.507,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "under",
+              "params": "team=away&to_over=10&total=90.5",
+              "marketUrl": "cricket.team_total_from_0_over_to_x_over/under?team=away&to_over=10&total=90.5",
+              "price": 1.85,
+              "minStake": 0.1,
+              "maxStake": 3389.64654,
+              "probability": 0.493,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "over",
+              "params": "team=away&to_over=10&total=85.5",
+              "marketUrl": "cricket.team_total_from_0_over_to_x_over/over?team=away&to_over=10&total=85.5",
+              "price": 1.52,
+              "minStake": 0.1,
+              "maxStake": 5540.76908,
+              "probability": 0.602,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "under",
+              "params": "team=away&to_over=10&total=85.5",
+              "marketUrl": "cricket.team_total_from_0_over_to_x_over/under?team=away&to_over=10&total=85.5",
+              "price": 2.3,
+              "minStake": 0.1,
+              "maxStake": 2216.30724,
+              "probability": 0.398,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "over",
+              "params": "team=away&to_over=10&total=95.5",
+              "marketUrl": "cricket.team_total_from_0_over_to_x_over/over?team=away&to_over=10&total=95.5",
+              "price": 2.25,
+              "minStake": 0.1,
+              "maxStake": 2304.96,
+              "probability": 0.411,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "under",
+              "params": "team=away&to_over=10&total=95.5",
+              "marketUrl": "cricket.team_total_from_0_over_to_x_over/under?team=away&to_over=10&total=95.5",
+              "price": 1.57,
+              "minStake": 0.1,
+              "maxStake": 5054.73612,
+              "probability": 0.589,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            }
+          ]
+        },
+        "period=ft&to_over=10&team=home": {
+          "sequence": "822",
+          "selections": [
+            {
+              "outcome": "over",
+              "params": "team=home&to_over=10&total=91.5",
+              "marketUrl": "cricket.team_total_from_0_over_to_x_over/over?team=home&to_over=10&total=91.5",
+              "price": 1.85,
+              "minStake": 0.1,
+              "maxStake": 3389.64654,
+              "probability": 0.493,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "under",
+              "params": "team=home&to_over=10&total=91.5",
+              "marketUrl": "cricket.team_total_from_0_over_to_x_over/under?team=home&to_over=10&total=91.5",
+              "price": 1.8,
+              "minStake": 0.1,
+              "maxStake": 3601.5,
+              "probability": 0.507,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "over",
+              "params": "team=home&to_over=10&total=86.5",
+              "marketUrl": "cricket.team_total_from_0_over_to_x_over/over?team=home&to_over=10&total=86.5",
+              "price": 1.55,
+              "minStake": 0.1,
+              "maxStake": 5238.54492,
+              "probability": 0.592,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "under",
+              "params": "team=home&to_over=10&total=86.5",
+              "marketUrl": "cricket.team_total_from_0_over_to_x_over/under?team=home&to_over=10&total=86.5",
+              "price": 2.25,
+              "minStake": 0.1,
+              "maxStake": 2304.96,
+              "probability": 0.408,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "over",
+              "params": "team=home&to_over=10&total=96.5",
+              "marketUrl": "cricket.team_total_from_0_over_to_x_over/over?team=home&to_over=10&total=96.5",
+              "price": 2.3,
+              "minStake": 0.1,
+              "maxStake": 2216.30724,
+              "probability": 0.398,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "under",
+              "params": "team=home&to_over=10&total=96.5",
+              "marketUrl": "cricket.team_total_from_0_over_to_x_over/under?team=home&to_over=10&total=96.5",
+              "price": 1.52,
+              "minStake": 0.1,
+              "maxStake": 5540.76908,
+              "probability": 0.602,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            }
+          ]
+        },
+        "period=ft&to_over=6&team=away": {
+          "sequence": "822",
+          "selections": [
+            {
+              "outcome": "over",
+              "params": "team=away&to_over=6&total=57.5",
+              "marketUrl": "cricket.team_total_from_0_over_to_x_over/over?team=away&to_over=6&total=57.5",
+              "price": 1.85,
+              "minStake": 0.1,
+              "maxStake": 3389.64654,
+              "probability": 0.5,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "under",
+              "params": "team=away&to_over=6&total=57.5",
+              "marketUrl": "cricket.team_total_from_0_over_to_x_over/under?team=away&to_over=6&total=57.5",
+              "price": 1.85,
+              "minStake": 0.1,
+              "maxStake": 3389.64654,
+              "probability": 0.5,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "over",
+              "params": "team=away&to_over=6&total=52.5",
+              "marketUrl": "cricket.team_total_from_0_over_to_x_over/over?team=away&to_over=6&total=52.5",
+              "price": 1.47,
+              "minStake": 0.1,
+              "maxStake": 6130.21262,
+              "probability": 0.625,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "under",
+              "params": "team=away&to_over=6&total=52.5",
+              "marketUrl": "cricket.team_total_from_0_over_to_x_over/under?team=away&to_over=6&total=52.5",
+              "price": 2.45,
+              "minStake": 0.1,
+              "maxStake": 1987.03428,
+              "probability": 0.375,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "over",
+              "params": "team=away&to_over=6&total=62.5",
+              "marketUrl": "cricket.team_total_from_0_over_to_x_over/over?team=away&to_over=6&total=62.5",
+              "price": 2.45,
+              "minStake": 0.1,
+              "maxStake": 1987.03428,
+              "probability": 0.375,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "under",
+              "params": "team=away&to_over=6&total=62.5",
+              "marketUrl": "cricket.team_total_from_0_over_to_x_over/under?team=away&to_over=6&total=62.5",
+              "price": 1.47,
+              "minStake": 0.1,
+              "maxStake": 6130.21262,
+              "probability": 0.625,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            }
+          ]
+        },
+        "period=ft&to_over=6&team=home": {
+          "sequence": "822",
+          "selections": [
+            {
+              "outcome": "over",
+              "params": "team=home&to_over=6&total=57.5",
+              "marketUrl": "cricket.team_total_from_0_over_to_x_over/over?team=home&to_over=6&total=57.5",
+              "price": 1.8,
+              "minStake": 0.1,
+              "maxStake": 3601.5,
+              "probability": 0.507,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "under",
+              "params": "team=home&to_over=6&total=57.5",
+              "marketUrl": "cricket.team_total_from_0_over_to_x_over/under?team=home&to_over=6&total=57.5",
+              "price": 1.85,
+              "minStake": 0.1,
+              "maxStake": 3389.64654,
+              "probability": 0.493,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "over",
+              "params": "team=home&to_over=6&total=52.5",
+              "marketUrl": "cricket.team_total_from_0_over_to_x_over/over?team=home&to_over=6&total=52.5",
+              "price": 1.45,
+              "minStake": 0.1,
+              "maxStake": 6402.66634,
+              "probability": 0.633,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "under",
+              "params": "team=home&to_over=6&total=52.5",
+              "marketUrl": "cricket.team_total_from_0_over_to_x_over/under?team=home&to_over=6&total=52.5",
+              "price": 2.5,
+              "minStake": 0.1,
+              "maxStake": 1920.8,
+              "probability": 0.367,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "over",
+              "params": "team=home&to_over=6&total=62.5",
+              "marketUrl": "cricket.team_total_from_0_over_to_x_over/over?team=home&to_over=6&total=62.5",
+              "price": 2.4,
+              "minStake": 0.1,
+              "maxStake": 2058,
+              "probability": 0.38,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "under",
+              "params": "team=home&to_over=6&total=62.5",
+              "marketUrl": "cricket.team_total_from_0_over_to_x_over/under?team=home&to_over=6&total=62.5",
+              "price": 1.47,
+              "minStake": 0.1,
+              "maxStake": 6130.21262,
+              "probability": 0.62,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            }
+          ]
+        },
+        "period=ft&to_over=8&team=away": {
+          "sequence": "822",
+          "selections": [
+            {
+              "outcome": "over",
+              "params": "team=away&to_over=8&total=73.5",
+              "marketUrl": "cricket.team_total_from_0_over_to_x_over/over?team=away&to_over=8&total=73.5",
+              "price": 1.85,
+              "minStake": 0.1,
+              "maxStake": 3389.64654,
+              "probability": 0.5,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "under",
+              "params": "team=away&to_over=8&total=73.5",
+              "marketUrl": "cricket.team_total_from_0_over_to_x_over/under?team=away&to_over=8&total=73.5",
+              "price": 1.85,
+              "minStake": 0.1,
+              "maxStake": 3389.64654,
+              "probability": 0.5,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "over",
+              "params": "team=away&to_over=8&total=68.5",
+              "marketUrl": "cricket.team_total_from_0_over_to_x_over/over?team=away&to_over=8&total=68.5",
+              "price": 1.5,
+              "minStake": 0.1,
+              "maxStake": 5762.4,
+              "probability": 0.61,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "under",
+              "params": "team=away&to_over=8&total=68.5",
+              "marketUrl": "cricket.team_total_from_0_over_to_x_over/under?team=away&to_over=8&total=68.5",
+              "price": 2.35,
+              "minStake": 0.1,
+              "maxStake": 2134.22146,
+              "probability": 0.39,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "over",
+              "params": "team=away&to_over=8&total=78.5",
+              "marketUrl": "cricket.team_total_from_0_over_to_x_over/over?team=away&to_over=8&total=78.5",
+              "price": 2.3,
+              "minStake": 0.1,
+              "maxStake": 2216.30724,
+              "probability": 0.398,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "under",
+              "params": "team=away&to_over=8&total=78.5",
+              "marketUrl": "cricket.team_total_from_0_over_to_x_over/under?team=away&to_over=8&total=78.5",
+              "price": 1.52,
+              "minStake": 0.1,
+              "maxStake": 5540.76908,
+              "probability": 0.602,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            }
+          ]
+        },
+        "period=ft&to_over=8&team=home": {
+          "sequence": "822",
+          "selections": [
+            {
+              "outcome": "over",
+              "params": "team=home&to_over=8&total=73.5",
+              "marketUrl": "cricket.team_total_from_0_over_to_x_over/over?team=home&to_over=8&total=73.5",
+              "price": 1.8,
+              "minStake": 0.1,
+              "maxStake": 3601.5,
+              "probability": 0.507,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "under",
+              "params": "team=home&to_over=8&total=73.5",
+              "marketUrl": "cricket.team_total_from_0_over_to_x_over/under?team=home&to_over=8&total=73.5",
+              "price": 1.85,
+              "minStake": 0.1,
+              "maxStake": 3389.64654,
+              "probability": 0.493,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "over",
+              "params": "team=home&to_over=8&total=68.5",
+              "marketUrl": "cricket.team_total_from_0_over_to_x_over/over?team=home&to_over=8&total=68.5",
+              "price": 1.47,
+              "minStake": 0.1,
+              "maxStake": 6130.21262,
+              "probability": 0.62,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "under",
+              "params": "team=home&to_over=8&total=68.5",
+              "marketUrl": "cricket.team_total_from_0_over_to_x_over/under?team=home&to_over=8&total=68.5",
+              "price": 2.4,
+              "minStake": 0.1,
+              "maxStake": 2058,
+              "probability": 0.38,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "over",
+              "params": "team=home&to_over=8&total=78.5",
+              "marketUrl": "cricket.team_total_from_0_over_to_x_over/over?team=home&to_over=8&total=78.5",
+              "price": 2.3,
+              "minStake": 0.1,
+              "maxStake": 2216.30724,
+              "probability": 0.403,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "under",
+              "params": "team=home&to_over=8&total=78.5",
+              "marketUrl": "cricket.team_total_from_0_over_to_x_over/under?team=home&to_over=8&total=78.5",
+              "price": 1.55,
+              "minStake": 0.1,
+              "maxStake": 5238.54492,
+              "probability": 0.597,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            }
+          ]
+        }
+      }
+    },
+    "cricket.team_total_in_highest_scoring_over": {
+      "submarkets": {
+        "period=ft&team=away": {
+          "sequence": "822",
+          "selections": [
+            {
+              "outcome": "over",
+              "params": "team=away&total=20.5",
+              "marketUrl": "cricket.team_total_in_highest_scoring_over/over?team=away&total=20.5",
+              "price": 1.95,
+              "minStake": 0.1,
+              "maxStake": 2122.9887,
+              "probability": 0.473,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "under",
+              "params": "team=away&total=20.5",
+              "marketUrl": "cricket.team_total_in_highest_scoring_over/under?team=away&total=20.5",
+              "price": 1.75,
+              "minStake": 0.1,
+              "maxStake": 2689.12,
+              "probability": 0.527,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            }
+          ]
+        },
+        "period=ft&team=home": {
+          "sequence": "822",
+          "selections": [
+            {
+              "outcome": "over",
+              "params": "team=home&total=20.5",
+              "marketUrl": "cricket.team_total_in_highest_scoring_over/over?team=home&total=20.5",
+              "price": 1.85,
+              "minStake": 0.1,
+              "maxStake": 2372.75248,
+              "probability": 0.5,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "under",
+              "params": "team=home&total=20.5",
+              "marketUrl": "cricket.team_total_in_highest_scoring_over/under?team=home&total=20.5",
+              "price": 1.85,
+              "minStake": 0.1,
+              "maxStake": 2372.75248,
+              "probability": 0.5,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            }
+          ]
+        }
+      }
+    },
+    "cricket.team_total_sixes": {
+      "submarkets": {
+        "period=ft&team=away": {
+          "sequence": "822",
+          "selections": [
+            {
+              "outcome": "over",
+              "params": "team=away&total=10.5",
+              "marketUrl": "cricket.team_total_sixes/over?team=away&total=10.5",
+              "price": 1.95,
+              "minStake": 0.1,
+              "maxStake": 3032.84128,
+              "probability": 0.473,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "under",
+              "params": "team=away&total=10.5",
+              "marketUrl": "cricket.team_total_sixes/under?team=away&total=10.5",
+              "price": 1.75,
+              "minStake": 0.1,
+              "maxStake": 3841.6,
+              "probability": 0.527,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            }
+          ]
+        },
+        "period=ft&team=home": {
+          "sequence": "822",
+          "selections": [
+            {
+              "outcome": "over",
+              "params": "team=home&total=10.5",
+              "marketUrl": "cricket.team_total_sixes/over?team=home&total=10.5",
+              "price": 2,
+              "minStake": 0.1,
+              "maxStake": 2881.2,
+              "probability": 0.459,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "under",
+              "params": "team=home&total=10.5",
+              "marketUrl": "cricket.team_total_sixes/under?team=home&total=10.5",
+              "price": 1.7,
+              "minStake": 0.1,
+              "maxStake": 4116,
+              "probability": 0.541,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            }
+          ]
+        }
+      }
+    },
+    "cricket.team_totals": {
+      "submarkets": {
+        "period=ft&team=away": {
+          "sequence": "822",
+          "selections": [
+            {
+              "outcome": "over",
+              "params": "team=away&total=184.5",
+              "marketUrl": "cricket.team_totals/over?team=away&total=184.5",
+              "price": 1.85,
+              "minStake": 0.1,
+              "maxStake": 2711.71684,
+              "probability": 0.5,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "under",
+              "params": "team=away&total=184.5",
+              "marketUrl": "cricket.team_totals/under?team=away&total=184.5",
+              "price": 1.85,
+              "minStake": 0.1,
+              "maxStake": 2711.71684,
+              "probability": 0.5,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            }
+          ]
+        },
+        "period=ft&team=home": {
+          "sequence": "822",
+          "selections": [
+            {
+              "outcome": "over",
+              "params": "team=home&total=184.5",
+              "marketUrl": "cricket.team_totals/over?team=home&total=184.5",
+              "price": 1.85,
+              "minStake": 0.1,
+              "maxStake": 2711.71684,
+              "probability": 0.5,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "under",
+              "params": "team=home&total=184.5",
+              "marketUrl": "cricket.team_totals/under?team=home&total=184.5",
+              "price": 1.85,
+              "minStake": 0.1,
+              "maxStake": 2711.71684,
+              "probability": 0.5,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            }
+          ]
+        }
+      }
+    },
+    "cricket.top_batter_total": {
+      "submarkets": {
+        "period=ft": {
+          "sequence": "822",
+          "selections": [
+            {
+              "outcome": "over",
+              "params": "total=73.5",
+              "marketUrl": "cricket.top_batter_total/over?total=73.5",
+              "price": 1.85,
+              "minStake": 0.1,
+              "maxStake": 3389.64654,
+              "probability": 0.5,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "under",
+              "params": "total=73.5",
+              "marketUrl": "cricket.top_batter_total/under?total=73.5",
+              "price": 1.85,
+              "minStake": 0.1,
+              "maxStake": 3389.64654,
+              "probability": 0.5,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            }
+          ]
+        }
+      }
+    },
+    "cricket.total_in_highest_scoring_over": {
+      "submarkets": {
+        "period=ft": {
+          "sequence": "822",
+          "selections": [
+            {
+              "outcome": "over",
+              "params": "total=22.5",
+              "marketUrl": "cricket.total_in_highest_scoring_over/over?total=22.5",
+              "price": 1.85,
+              "minStake": 0.1,
+              "maxStake": 3389.64654,
+              "probability": 0.5,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "under",
+              "params": "total=22.5",
+              "marketUrl": "cricket.total_in_highest_scoring_over/under?total=22.5",
+              "price": 1.85,
+              "minStake": 0.1,
+              "maxStake": 3389.64654,
+              "probability": 0.5,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            }
+          ]
+        }
+      }
+    },
+    "cricket.total_sixes": {
+      "submarkets": {
+        "period=ft": {
+          "sequence": "822",
+          "selections": [
+            {
+              "outcome": "over",
+              "params": "total=20.5",
+              "marketUrl": "cricket.total_sixes/over?total=20.5",
+              "price": 1.9,
+              "minStake": 0.1,
+              "maxStake": 3201.33268,
+              "probability": 0.493,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "under",
+              "params": "total=20.5",
+              "marketUrl": "cricket.total_sixes/under?total=20.5",
+              "price": 1.85,
+              "minStake": 0.1,
+              "maxStake": 3389.64654,
+              "probability": 0.507,
+              "status": "SELECTION_ENABLED",
+              "side": "BACK"
+            }
+          ]
+        }
+      }
+    },
+    "cricket.will_there_be_a_tie": {
+      "submarkets": {
+        "period=ft": {
+          "sequence": "822",
+          "selections": [
+            {
+              "outcome": "yes",
+              "params": "",
+              "marketUrl": "cricket.will_there_be_a_tie/yes",
+              "price": 0,
+              "minStake": 0.1,
+              "maxStake": 0,
+              "probability": 0,
+              "status": "SELECTION_DISABLED",
+              "side": "BACK"
+            },
+            {
+              "outcome": "no",
+              "params": "",
+              "marketUrl": "cricket.will_there_be_a_tie/no",
+              "price": 0,
+              "minStake": 0.1,
+              "maxStake": 0,
+              "probability": 0,
+              "status": "SELECTION_DISABLED",
+              "side": "BACK"
+            }
+          ]
+        }
+      }
+    }
+  },
+  "name": "Delhi Capitals v Kolkata Knight Riders",
+  "key": "cb39-delhi-daredevils-v-cb41-kolkata-knight-riders",
+  "cutoffTime": "2026-05-08T14:00:00Z",
+  "metadata": {
+    "opinions": {},
+    "opinion": []
+  },
+  "type": "EVENT_TYPE_EVENT",
+  "settlement": {},
+  "resultedTime": "",
+  "gradingDuration": 15,
+  "endTime": ""
+}

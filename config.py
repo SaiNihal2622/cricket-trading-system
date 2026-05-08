@@ -17,13 +17,16 @@ NVIDIA_API_KEY = os.getenv("NVIDIA_API_KEY", "")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 GROK_API_KEY = os.getenv("GROK_API_KEY", "")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+MIMO_API_KEY = os.getenv("MIMO_API_KEY", "")
 
 # ── AI Model Endpoints ────────────────────────────────────────
 NVIDIA_BASE_URL = "https://integrate.api.nvidia.com/v1"
 GROK_BASE_URL = "https://api.x.ai/v1"
+MIMO_BASE_URL = "https://token-plan-sgp.xiaomimimo.com/v1"
 GEMINI_MODEL = "gemini-2.0-flash"
 NVIDIA_MODEL = "nvidia/llama-3.1-nemotron-70b-instruct"
 GROK_MODEL = "grok-3"
+MIMO_MODEL = "mimo-v2-omni"
 
 # ── Cloudbet ──────────────────────────────────────────────────
 CLOUDBET_BASE = "https://sports-api.cloudbet.com/pub/v2"
