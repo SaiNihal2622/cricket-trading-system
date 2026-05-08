@@ -2,8 +2,8 @@ name: Live Cricket Trading
 
 on:
   schedule:
-    - cron: '30 13 * * 3,4,5,6,7'
-    - cron: '30 13 * * 0,1'
+    - cron: '30 13 * * 3,4,5,6,0'
+    - cron: '30 13 * * 1'
 
   workflow_dispatch:
     inputs:
