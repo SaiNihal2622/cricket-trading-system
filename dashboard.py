@@ -6,6 +6,7 @@ from fastapi import FastAPI, WebSocket
 from fastapi.responses import HTMLResponse
 import uvicorn
 import db
+import live_data
 from config import DASHBOARD_PORT, TRADING_MODE
 
 app = FastAPI(title="Cricket Trading Dashboard")
@@ -87,29 +88,49 @@ function connect() {
   ws.onclose = () => { setTimeout(connect, 3000); };
 }
 function updateDashboard(d) {
-  // Live Matches
-  const matches = d.matches || [];
+  // Live Matches - support both live_data format and db format
+  const events = d.live_data?.events || d.matches || [];
+  const liveCount = d.live_data?.live_count || 0;
+  const upcomingCount = d.live_data?.upcoming_count || 0;
+  const totalCount = d.live_data?.total_count || events.length;
   let matchHtml = '';
-  if (matches.length === 0) {
+  if (events.length === 0) {
     matchHtml = '<div class="no-matches">No matches found. The system will auto-detect IPL matches when connected to Cloudbet API.</div>';
   } else {
-    matches.forEach(m => {
-      const statusBadge = `<span class="badge badge-${m.status}">${m.status.toUpperCase()}</span>`;
-      const score = m.live_score ? `<div class="match-score">${m.batting_team ? m.batting_team + ': ' : ''}${m.live_score}</div>` : '';
-      const trades = m.trade_count > 0 ? `<div class="match-detail">Trades: <span>${m.open_trades} open / ${m.trade_count} total</span></div>` : '';
+    matchHtml += `<div style="margin-bottom:12px;color:#8892a4;font-size:13px">`;
+    matchHtml += `<span class="positive">${liveCount} LIVE</span> &middot; `;
+    matchHtml += `${upcomingCount} Upcoming &middot; `;
+    matchHtml += `${totalCount} Total &middot; `;
+    matchHtml += `Source: <span style="color:#00d4aa">Cloudbet API</span></div>`;
+    events.forEach(m => {
+      const status = m.status || 'unknown';
+      const statusBadge = `<span class="badge badge-${status}">${status.toUpperCase()}</span>`;
       const startTime = m.start_time ? new Date(m.start_time).toLocaleString('en-IN', {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) : '';
+      const mktCount = m.market_count || (m.markets||[]).length || 0;
+      let oddsHtml = '';
+      if (m.live_odds) {
+        Object.entries(m.live_odds).forEach(([mkt, sels]) => {
+          if (sels && sels.length > 0) {
+            oddsHtml += `<div class="match-detail">Odds: `;
+            sels.slice(0,4).forEach(s => {
+              oddsHtml += `<span style="margin-right:8px">${s.label}: ${s.price}</span>`;
+            });
+            oddsHtml += `</div>`;
+          }
+        });
+      }
       matchHtml += `
         <div class="match-card">
           <div class="match-header">
-            <div class="match-teams">${m.name || m.home_team + ' vs ' + m.away_team}</div>
+            <div class="match-teams">${m.name || (m.home||'') + ' vs ' + (m.away||'')}</div>
             ${statusBadge}
           </div>
-          ${score}
           <div class="match-details">
-            <div class="match-detail">Venue: <span>${m.venue || 'TBD'}</span></div>
             <div class="match-detail">Time: <span>${startTime}</span></div>
-            ${trades}
+            <div class="match-detail">Markets: <span>${mktCount}</span></div>
+            <div class="match-detail">Event ID: <span>${m.id||''}</span></div>
           </div>
+          ${oddsHtml}
         </div>`;
     });
   }
@@ -215,7 +236,34 @@ async def api_stats():
 
 @app.get("/api/matches")
 async def api_matches():
-    return db.get_all_matches(limit=20)
+    """Return real live matches from Cloudbet API."""
+    try:
+        live = live_data.get_live_match_data()
+        return live
+    except Exception as e:
+        return {"events": [], "error": str(e), "source": "fallback"}
+
+
+@app.get("/api/live")
+async def api_live():
+    """Return comprehensive live data from Cloudbet."""
+    try:
+        live = live_data.get_live_match_data()
+        stats = db.get_trade_stats()
+        trades = db.get_all_trades(limit=50)
+        decisions = db.get_ensemble_decisions(limit=10)
+        return {
+            "live_data": live,
+            "stats": stats,
+            "trades": trades,
+            "decisions": decisions,
+            "active_markets": len([t for t in trades if t.get("status") == "open"]),
+            "last_scan": datetime.now().strftime("%H:%M:%S"),
+            "models_active": 4,
+            "mode": TRADING_MODE,
+        }
+    except Exception as e:
+        return {"error": str(e)}
 
 
 @app.websocket("/ws")
@@ -227,11 +275,17 @@ async def websocket_endpoint(ws: WebSocket):
             trades = db.get_all_trades(limit=50)
             decisions = db.get_ensemble_decisions(limit=10)
             matches = db.get_all_matches(limit=20)
+            # Fetch live Cloudbet data
+            try:
+                live = live_data.get_live_match_data()
+            except Exception:
+                live = {"events": [], "live_count": 0, "upcoming_count": 0, "total_count": 0}
             await ws.send_json({
                 "stats": stats,
                 "trades": trades,
                 "decisions": decisions,
                 "matches": matches,
+                "live_data": live,
                 "active_markets": len([t for t in trades if t.get("status") == "open"]),
                 "last_scan": datetime.now().strftime("%H:%M:%S"),
                 "models_active": 4,
