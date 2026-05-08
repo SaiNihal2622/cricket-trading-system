@@ -1,5 +1,6 @@
 """Live trading dashboard - FastAPI web UI."""
 import json
+import asyncio
 from datetime import datetime
 from fastapi import FastAPI, WebSocket
 from fastapi.responses import HTMLResponse
@@ -37,6 +38,11 @@ td{padding:10px 8px;border-bottom:1px solid #0f1520;font-size:14px}
 .badge-pending{background:#ff6b3522;color:#ff6b35}
 .badge-win{background:#00d4aa22;color:#00d4aa}
 .badge-loss{background:#ff475722;color:#ff4757}
+.badge-live{background:#ff475722;color:#ff4757;animation:pulse 2s infinite}
+.badge-trading{background:#00d4aa22;color:#00d4aa}
+.badge-upcoming{background:#4a90d922;color:#4a90d9}
+.badge-completed{background:#8892a422;color:#8892a4}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.6}}
 .models-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
 .model-card{background:#0d1220;border:1px solid #1e2a3a;border-radius:8px;padding:12px;text-align:center}
 .model-card .name{font-size:12px;color:#8892a4;margin-bottom:4px}
@@ -45,6 +51,15 @@ td{padding:10px 8px;border-bottom:1px solid #0f1520;font-size:14px}
 .refresh-btn:hover{background:#00b894}
 #status{color:#8892a4;font-size:12px}
 .full-width{grid-column:1/-1}
+.match-card{background:#0d1220;border:1px solid #1e2a3a;border-radius:10px;padding:16px;margin-bottom:12px;transition:border-color 0.3s}
+.match-card:hover{border-color:#00d4aa}
+.match-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.match-teams{font-size:18px;font-weight:700;color:#fff}
+.match-score{font-size:22px;font-weight:700;color:#00d4aa;font-family:'Courier New',monospace}
+.match-details{display:flex;gap:20px;flex-wrap:wrap}
+.match-detail{font-size:13px;color:#8892a4}
+.match-detail span{color:#e0e0e0;font-weight:500}
+.no-matches{text-align:center;padding:30px;color:#8892a4;font-size:14px}
 </style>
 </head><body>
 <div class="header">
@@ -53,6 +68,7 @@ td{padding:10px 8px;border-bottom:1px solid #0f1520;font-size:14px}
   <button class="refresh-btn" onclick="refresh()">Refresh</button></div>
 </div>
 <div class="grid">
+  <div class="card full-width"><h3>🏏 Live Matches</h3><div id="matches">Loading...</div></div>
   <div class="card"><h3>📊 Portfolio Summary</h3><div id="portfolio">Loading...</div></div>
   <div class="card"><h3>🤖 AI Models</h3><div id="models">Loading...</div></div>
   <div class="card"><h3>📈 Performance</h3><div id="performance">Loading...</div></div>
@@ -71,6 +87,34 @@ function connect() {
   ws.onclose = () => { setTimeout(connect, 3000); };
 }
 function updateDashboard(d) {
+  // Live Matches
+  const matches = d.matches || [];
+  let matchHtml = '';
+  if (matches.length === 0) {
+    matchHtml = '<div class="no-matches">No matches found. The system will auto-detect IPL matches when connected to Cloudbet API.</div>';
+  } else {
+    matches.forEach(m => {
+      const statusBadge = `<span class="badge badge-${m.status}">${m.status.toUpperCase()}</span>`;
+      const score = m.live_score ? `<div class="match-score">${m.batting_team ? m.batting_team + ': ' : ''}${m.live_score}</div>` : '';
+      const trades = m.trade_count > 0 ? `<div class="match-detail">Trades: <span>${m.open_trades} open / ${m.trade_count} total</span></div>` : '';
+      const startTime = m.start_time ? new Date(m.start_time).toLocaleString('en-IN', {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) : '';
+      matchHtml += `
+        <div class="match-card">
+          <div class="match-header">
+            <div class="match-teams">${m.name || m.home_team + ' vs ' + m.away_team}</div>
+            ${statusBadge}
+          </div>
+          ${score}
+          <div class="match-details">
+            <div class="match-detail">Venue: <span>${m.venue || 'TBD'}</span></div>
+            <div class="match-detail">Time: <span>${startTime}</span></div>
+            ${trades}
+          </div>
+        </div>`;
+    });
+  }
+  document.getElementById('matches').innerHTML = matchHtml;
+
   // Portfolio
   const p = d.stats?.demo || {};
   const total = p.total || 0;
@@ -91,6 +135,7 @@ function updateDashboard(d) {
     mhtml += '<div class="model-card"><div class="name">NVIDIA Nemotron</div><div class="accuracy">--</div></div>';
     mhtml += '<div class="model-card"><div class="name">Gemini Flash</div><div class="accuracy">--</div></div>';
     mhtml += '<div class="model-card"><div class="name">Grok 3</div><div class="accuracy">--</div></div>';
+    mhtml += '<div class="model-card"><div class="name">MIMO</div><div class="accuracy">--</div></div>';
   } else {
     models.forEach(m => {
       mhtml += `<div class="model-card"><div class="name">${m.model_name}</div><div class="accuracy">${(m.accuracy*100).toFixed(0)}%</div></div>`;
@@ -109,11 +154,11 @@ function updateDashboard(d) {
   document.getElementById('decisions').innerHTML = dhtml;
   // Trades
   const trades = d.trades || [];
-  let thead = '<table><tr><th>Time</th><th>Market</th><th>Selection</th><th>Odds</th><th>Stake</th><th>Status</th><th>P&L</th></tr>';
+  let thead = '<table><tr><th>Time</th><th>Match</th><th>Market</th><th>Selection</th><th>Odds</th><th>Stake</th><th>Status</th><th>P&L</th></tr>';
   trades.slice(0,20).forEach(t => {
     const cls = t.pnl > 0 ? 'win' : (t.pnl < 0 ? 'loss' : t.status);
-    thead += `<tr><td>${t.created_at?.substring(11,19)||''}</td><td>${t.market_type?.substring(0,25)||''}</td>
-      <td>${t.selection?.substring(0,25)||''}</td><td>${t.odds}</td><td>$${t.stake}</td>
+    thead += `<tr><td>${t.created_at?.substring(11,19)||''}</td><td>${t.match_id?.substring(0,15)||''}</td><td>${t.market_type?.substring(0,20)||''}</td>
+      <td>${t.selection?.substring(0,20)||''}</td><td>${t.odds}</td><td>$${t.stake}</td>
       <td><span class="badge badge-${cls}">${t.status}</span></td>
       <td class="${t.pnl>=0?'positive':'negative'}">$${(t.pnl||0).toFixed(2)}</td></tr>`;
   });
@@ -125,11 +170,12 @@ function updateDashboard(d) {
     <div class="stat-row"><span class="stat-label">Active Markets</span><span class="stat-value">${d.active_markets||0}</span></div>
     <div class="stat-row"><span class="stat-label">Last Scan</span><span class="stat-value">${d.last_scan||'Never'}</span></div>
     <div class="stat-row"><span class="stat-label">AI Models Active</span><span class="stat-value">${d.models_active||0}</span></div>
+    <div class="stat-row"><span class="stat-label">Matches Tracked</span><span class="stat-value">${(d.matches||[]).length}</span></div>
   `;
 }
 function refresh() { fetch('/api/dashboard').then(r=>r.json()).then(updateDashboard); }
 connect();
-setInterval(refresh, 30000);
+setInterval(refresh, 15000);
 </script>
 </body></html>"""
 
@@ -144,13 +190,15 @@ async def api_dashboard():
     stats = db.get_trade_stats()
     trades = db.get_all_trades(limit=50)
     decisions = db.get_ensemble_decisions(limit=10)
+    matches = db.get_all_matches(limit=20)
     return {
         "stats": stats,
         "trades": trades,
         "decisions": decisions,
+        "matches": matches,
         "active_markets": len([t for t in trades if t.get("status") == "open"]),
         "last_scan": datetime.now().strftime("%H:%M:%S"),
-        "models_active": 3,
+        "models_active": 4,
         "mode": TRADING_MODE,
     }
 
@@ -165,6 +213,11 @@ async def api_stats():
     return db.get_trade_stats()
 
 
+@app.get("/api/matches")
+async def api_matches():
+    return db.get_all_matches(limit=20)
+
+
 @app.websocket("/ws")
 async def websocket_endpoint(ws: WebSocket):
     await ws.accept()
@@ -173,24 +226,26 @@ async def websocket_endpoint(ws: WebSocket):
             stats = db.get_trade_stats()
             trades = db.get_all_trades(limit=50)
             decisions = db.get_ensemble_decisions(limit=10)
+            matches = db.get_all_matches(limit=20)
             await ws.send_json({
                 "stats": stats,
                 "trades": trades,
                 "decisions": decisions,
+                "matches": matches,
                 "active_markets": len([t for t in trades if t.get("status") == "open"]),
                 "last_scan": datetime.now().strftime("%H:%M:%S"),
-                "models_active": 3,
+                "models_active": 4,
                 "mode": TRADING_MODE,
             })
             await asyncio.sleep(10)
     except Exception:
         pass
 
-import asyncio
 
 def start_dashboard():
     db.init_db()
     uvicorn.run(app, host="0.0.0.0", port=DASHBOARD_PORT, log_level="warning")
+
 
 if __name__ == "__main__":
     start_dashboard()

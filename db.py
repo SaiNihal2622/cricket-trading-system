@@ -311,6 +311,34 @@ def get_ensemble_decisions(match_id: str = None, limit: int = 20):
     return [dict(r) for r in rows]
 
 
+def get_all_matches(limit: int = 50):
+    """Get all matches from DB."""
+    conn = get_conn()
+    rows = conn.execute("""
+        SELECT m.*, 
+            (SELECT COUNT(*) FROM trades t WHERE t.match_id = m.id) as trade_count,
+            (SELECT COUNT(*) FROM trades t WHERE t.match_id = m.id AND t.status = 'open') as open_trades,
+            (SELECT ls.runs || '/' || ls.wickets || ' (' || ls.overs || ' ov)' 
+             FROM live_scores ls WHERE ls.match_id = m.id 
+             ORDER BY ls.fetched_at DESC LIMIT 1) as live_score,
+            (SELECT ls.team FROM live_scores ls WHERE ls.match_id = m.id 
+             ORDER BY ls.fetched_at DESC LIMIT 1) as batting_team
+        FROM matches m
+        ORDER BY 
+            CASE m.status 
+                WHEN 'live' THEN 0 
+                WHEN 'trading' THEN 1 
+                WHEN 'upcoming' THEN 2 
+                WHEN 'completed' THEN 3 
+                ELSE 4 
+            END,
+            m.start_time ASC
+        LIMIT ?
+    """, (limit,)).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
 def get_session_stats(mode: str = None):
     """Get trading session statistics."""
     conn = get_conn()
