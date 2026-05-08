@@ -309,3 +309,41 @@ def get_ensemble_decisions(match_id: str = None, limit: int = 20):
         """, (limit,)).fetchall()
     conn.close()
     return [dict(r) for r in rows]
+
+
+def get_session_stats(mode: str = None):
+    """Get trading session statistics."""
+    conn = get_conn()
+    if mode is None:
+        mode = "demo"
+    
+    row = conn.execute("""
+        SELECT 
+            COUNT(*) as total_trades,
+            SUM(CASE WHEN status = 'won' THEN 1 ELSE 0 END) as won,
+            SUM(CASE WHEN status = 'lost' THEN 1 ELSE 0 END) as lost,
+            SUM(CASE WHEN status = 'open' THEN 1 ELSE 0 END) as open,
+            SUM(CASE WHEN status = 'won' THEN pnl ELSE 0 END) as total_won_pnl,
+            SUM(CASE WHEN status = 'lost' THEN stake ELSE 0 END) as total_lost_stake
+        FROM trades WHERE mode = ?
+    """, (mode,)).fetchone()
+    
+    conn.close()
+    
+    if not row:
+        return {"total_trades": 0, "won": 0, "lost": 0, "open": 0, "pnl": 0, "accuracy": 0}
+    
+    total = row["total_trades"] or 0
+    won = row["won"] or 0
+    lost = row["lost"] or 0
+    pnl = (row["total_won_pnl"] or 0) - (row["total_lost_stake"] or 0)
+    accuracy = won / (won + lost) if (won + lost) > 0 else 0
+    
+    return {
+        "total_trades": total,
+        "won": won,
+        "lost": lost,
+        "open": row["open"] or 0,
+        "pnl": pnl,
+        "accuracy": accuracy,
+    }
