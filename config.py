@@ -24,7 +24,7 @@ NVIDIA_BASE_URL = os.getenv("NVIDIA_BASE_URL", "https://integrate.api.nvidia.com
 GROK_BASE_URL = os.getenv("GROK_BASE_URL", "https://api.x.ai/v1")
 MIMO_BASE_URL = os.getenv("MIMO_BASE_URL", "https://token-plan-sgp.xiaomimimo.com/v1")
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
-MIMO_MODEL = os.getenv("MIMO_MODEL", "mimo-v2-omni")
+MIMO_MODEL = os.getenv("MIMO_MODEL", "mimo-v2.5-pro")
 # NVIDIA: use best available reasoning model (deepseek-v4-pro > mistral-large > nemotron)
 NVIDIA_MODEL = os.getenv("NVIDIA_MODEL", "deepseek-ai/deepseek-v4-pro")
 # Grok: use grok-3-mini for faster responses

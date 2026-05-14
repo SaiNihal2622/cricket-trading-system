@@ -144,7 +144,7 @@ async def call_grok(prompt: str) -> Optional[dict]:
 
 
 async def call_mimo(prompt: str) -> Optional[dict]:
-    """Call Xiaomi MiMo v2 Omni via API."""
+    """Call Xiaomi MiMo v2 Omni via API (OpenAI-compatible)."""
     if not MIMO_API_KEY:
         return None
     try:
@@ -162,11 +162,35 @@ async def call_mimo(prompt: str) -> Optional[dict]:
                         {"role": "user", "content": prompt},
                     ],
                     "temperature": 0.3,
-                    "max_tokens": 500,
+                    "max_tokens": 2000,
                 },
             )
             data = resp.json()
-            content = data["choices"][0]["message"]["content"]
+            # Handle different response formats (MiMo v2.5-pro puts reasoning in reasoning_content)
+            content = None
+            if "choices" in data and data["choices"]:
+                choice = data["choices"][0]
+                if isinstance(choice, dict):
+                    if "message" in choice:
+                        msg = choice["message"]
+                        content = msg.get("content", "")
+                        # MiMo v2.5-pro returns reasoning in reasoning_content when content is empty
+                        if not content and "reasoning_content" in msg:
+                            content = msg["reasoning_content"]
+                    elif "text" in choice:
+                        content = choice["text"]
+            elif "result" in data:
+                # Some APIs return {result: {text: ...}}
+                content = data["result"].get("text", "") or str(data["result"])
+            elif "response" in data:
+                content = data["response"]
+            elif "output" in data:
+                content = data["output"] if isinstance(data["output"], str) else str(data["output"])
+            
+            if not content:
+                print(f"[MiMo] Unexpected response format: {str(data)[:300]}")
+                return None
+            
             return _parse_response(content, "mimo_omni")
     except Exception as e:
         print(f"[MiMo] Error: {e}")
@@ -346,14 +370,14 @@ async def get_ensemble_prediction(
             predictions.append(r)
     
     if not predictions:
-        # Fallback: use statistical model only
+        # Fallback: return None probabilities so statistical model is used alone
         return {
-            "ensemble_prob": implied_prob,
+            "ensemble_prob": None,
             "consensus_score": 0.0,
             "models_agreed": 0,
             "models_total": 0,
             "predictions": [],
-            "reasoning": "No AI models available, using implied probability",
+            "reasoning": "No AI models available, using statistical model only",
         }
     
     # Weighted ensemble
