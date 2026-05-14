@@ -30,10 +30,11 @@ NVIDIA_MODEL = os.getenv("NVIDIA_MODEL", "deepseek-ai/deepseek-v4-flash")
 # Grok: use grok-3-mini for faster responses
 GROK_MODEL = os.getenv("GROK_MODEL", "grok-3-mini")
 # Fallback models if primary NVIDIA model is unavailable
+# deepseek-v4-flash is the primary; these are known-good fallbacks on build.nvidia.com
 NVIDIA_FALLBACK_MODELS = [
-    "deepseek-ai/deepseek-v4-pro",
-    "mistralai/mistral-large-3-675b-instruct-2512",
-    "nvidia/llama-3.1-nemotron-70b-instruct",
+    "meta/llama-3.3-70b-instruct",
+    "mistralai/mistral-small-3-1-24b-instruct-2503",
+    "nvidia/llama-3.1-nemotron-ultra-253b-v1",
 ]
 
 # ── Cloudbet ──────────────────────────────────────────────────

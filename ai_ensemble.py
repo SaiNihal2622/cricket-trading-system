@@ -7,6 +7,7 @@ The ensemble combines them using weighted averaging based on historical accuracy
 import json
 import asyncio
 import httpx
+import os
 import re
 from typing import Optional
 from config import (
@@ -18,12 +19,18 @@ from config import (
     NVIDIA_FALLBACK_MODELS,
 )
 
+# Groq (free/fast inference) - available via env
+GROQ_API_KEY_2 = os.getenv("GROQ_API_KEY", "")
+GROQ_BASE_URL_2 = "https://api.groq.com/openai/v1"
+GROQ_MODEL_NAME = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+
 # Model weights (updated dynamically based on performance)
 MODEL_WEIGHTS = {
-    "nvidia_nemotron": 0.25,
-    "gemini_flash": 0.25,
-    "grok_3": 0.25,
+    "nvidia_nemotron": 0.20,
+    "gemini_flash": 0.20,
+    "grok_3": 0.15,
     "mimo_omni": 0.25,
+    "groq_llama": 0.20,
 }
 
 SYSTEM_PROMPT = """You are an expert cricket betting analyst for IPL matches. 
@@ -49,7 +56,7 @@ Rules:
 
 
 async def call_nvidia(prompt: str) -> Optional[dict]:
-    """Call NVIDIA API with model fallback chain: deepseek-v4-pro → mistral-large → nemotron."""
+    """Call NVIDIA API with model fallback chain: deepseek-v4-flash → llama-3.3-70b → mistral-small."""
     if not NVIDIA_API_KEY:
         return None
     
@@ -57,7 +64,9 @@ async def call_nvidia(prompt: str) -> Optional[dict]:
     
     for model_id in models_to_try:
         try:
-            async with httpx.AsyncClient(timeout=45) as client:
+            # Reasoning models (deepseek-v4-flash, deepseek-r1) need more time
+            timeout = 90 if "deepseek" in model_id or "r1" in model_id else 60
+            async with httpx.AsyncClient(timeout=timeout) as client:
                 resp = await client.post(
                     f"{NVIDIA_BASE_URL}/chat/completions",
                     headers={
@@ -77,14 +86,15 @@ async def call_nvidia(prompt: str) -> Optional[dict]:
                 if resp.status_code == 200:
                     data = resp.json()
                     content = data["choices"][0]["message"]["content"]
-                    short_name = model_id.split("/")[-1][:20]
                     print(f"[NVIDIA] Using {model_id}")
                     return _parse_response(content, "nvidia_nemotron")
                 else:
-                    print(f"[NVIDIA] {model_id} returned {resp.status_code}, trying next...")
+                    err_body = resp.text[:200] if resp.text else "(empty)"
+                    print(f"[NVIDIA] {model_id} returned {resp.status_code}: {err_body}, trying next...")
                     continue
         except Exception as e:
-            print(f"[NVIDIA] {model_id} error: {e}, trying next...")
+            err_msg = str(e) if str(e) else f"{type(e).__name__}"
+            print(f"[NVIDIA] {model_id} error: {err_msg}, trying next...")
             continue
     
     print(f"[NVIDIA] All models failed")
@@ -143,12 +153,48 @@ async def call_grok(prompt: str) -> Optional[dict]:
         return None
 
 
+async def call_groq(prompt: str) -> Optional[dict]:
+    """Call Groq (free/fast inference) for predictions."""
+    if not GROQ_API_KEY_2:
+        return None
+    try:
+        async with httpx.AsyncClient(timeout=20) as client:
+            resp = await client.post(
+                f"{GROQ_BASE_URL_2}/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {GROQ_API_KEY_2}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": GROQ_MODEL_NAME,
+                    "messages": [
+                        {"role": "system", "content": SYSTEM_PROMPT},
+                        {"role": "user", "content": prompt},
+                    ],
+                    "temperature": 0.3,
+                    "max_tokens": 500,
+                },
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                content = data["choices"][0]["message"]["content"]
+                print(f"[Groq] Using {GROQ_MODEL_NAME}")
+                return _parse_response(content, "groq_llama")
+            else:
+                print(f"[Groq] Error {resp.status_code}: {resp.text[:200]}")
+                return None
+    except Exception as e:
+        print(f"[Groq] Error: {e}")
+        return None
+
+
 async def call_mimo(prompt: str) -> Optional[dict]:
     """Call Xiaomi MiMo v2 Omni via API (OpenAI-compatible)."""
     if not MIMO_API_KEY:
         return None
     try:
-        async with httpx.AsyncClient(timeout=30) as client:
+        # MiMo v2.5-pro is a reasoning model that takes longer
+        async with httpx.AsyncClient(timeout=120) as client:
             resp = await client.post(
                 f"{MIMO_BASE_URL}/chat/completions",
                 headers={
@@ -193,7 +239,8 @@ async def call_mimo(prompt: str) -> Optional[dict]:
             
             return _parse_response(content, "mimo_omni")
     except Exception as e:
-        print(f"[MiMo] Error: {e}")
+        err_msg = str(e) if str(e) else f"{type(e).__name__}: {repr(e)}"
+        print(f"[MiMo] Error: {err_msg}")
         return None
 
 
@@ -353,12 +400,13 @@ async def get_ensemble_prediction(
         live_score, venue_stats, team_stats,
     )
     
-    # Call all models in parallel
+    # Call all models in parallel (MiMo + NVIDIA + Groq + Gemini + Grok)
     tasks = [
         call_nvidia(prompt),
         call_gemini(prompt),
         call_grok(prompt),
         call_mimo(prompt),
+        call_groq(prompt),
         call_openai(prompt),
     ]
     
