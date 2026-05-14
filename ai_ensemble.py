@@ -15,6 +15,7 @@ from config import (
     GROK_API_KEY, GROK_BASE_URL, GROK_MODEL,
     OPENAI_API_KEY,
     MIMO_API_KEY, MIMO_BASE_URL, MIMO_MODEL,
+    NVIDIA_FALLBACK_MODELS,
 )
 
 # Model weights (updated dynamically based on performance)
@@ -48,33 +49,46 @@ Rules:
 
 
 async def call_nvidia(prompt: str) -> Optional[dict]:
-    """Call NVIDIA Nemotron via API."""
+    """Call NVIDIA API with model fallback chain: deepseek-v4-pro → mistral-large → nemotron."""
     if not NVIDIA_API_KEY:
         return None
-    try:
-        async with httpx.AsyncClient(timeout=30) as client:
-            resp = await client.post(
-                f"{NVIDIA_BASE_URL}/chat/completions",
-                headers={
-                    "Authorization": f"Bearer {NVIDIA_API_KEY}",
-                    "Content-Type": "application/json",
-                },
-                json={
-                    "model": NVIDIA_MODEL,
-                    "messages": [
-                        {"role": "system", "content": SYSTEM_PROMPT},
-                        {"role": "user", "content": prompt},
-                    ],
-                    "temperature": 0.3,
-                    "max_tokens": 500,
-                },
-            )
-            data = resp.json()
-            content = data["choices"][0]["message"]["content"]
-            return _parse_response(content, "nvidia_nemotron")
-    except Exception as e:
-        print(f"[NVIDIA] Error: {e}")
-        return None
+    
+    models_to_try = [NVIDIA_MODEL] + NVIDIA_FALLBACK_MODELS
+    
+    for model_id in models_to_try:
+        try:
+            async with httpx.AsyncClient(timeout=45) as client:
+                resp = await client.post(
+                    f"{NVIDIA_BASE_URL}/chat/completions",
+                    headers={
+                        "Authorization": f"Bearer {NVIDIA_API_KEY}",
+                        "Content-Type": "application/json",
+                    },
+                    json={
+                        "model": model_id,
+                        "messages": [
+                            {"role": "system", "content": SYSTEM_PROMPT},
+                            {"role": "user", "content": prompt},
+                        ],
+                        "temperature": 0.3,
+                        "max_tokens": 500,
+                    },
+                )
+                if resp.status_code == 200:
+                    data = resp.json()
+                    content = data["choices"][0]["message"]["content"]
+                    short_name = model_id.split("/")[-1][:20]
+                    print(f"[NVIDIA] Using {model_id}")
+                    return _parse_response(content, "nvidia_nemotron")
+                else:
+                    print(f"[NVIDIA] {model_id} returned {resp.status_code}, trying next...")
+                    continue
+        except Exception as e:
+            print(f"[NVIDIA] {model_id} error: {e}, trying next...")
+            continue
+    
+    print(f"[NVIDIA] All models failed")
+    return None
 
 
 async def call_gemini(prompt: str) -> Optional[dict]:

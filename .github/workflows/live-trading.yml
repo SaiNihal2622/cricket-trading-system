@@ -61,11 +61,19 @@ jobs:
           DURATION_HOURS: ${{ env.DURATION_HOURS }}
           SCAN_INTERVAL: ${{ env.SCAN_INTERVAL }}
           MIMO_API_KEY: ${{ secrets.MIMO_API_KEY }}
+          MIMO_MODEL: mimo-v2-omni
+          MIMO_BASE_URL: https://token-plan-sgp.xiaomimimo.com/v1
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: gemini-2.5-flash
           GROK_API_KEY: ${{ secrets.GROK_API_KEY }}
+          GROK_MODEL: grok-3-mini
+          GROK_BASE_URL: https://api.x.ai/v1
           NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+          NVIDIA_MODEL: deepseek-ai/deepseek-v4-pro
+          NVIDIA_BASE_URL: https://integrate.api.nvidia.com/v1
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           CLOUDBET_API_KEY: ${{ secrets.CLOUDBET_API_KEY }}
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_ALERT_CHAT_ID }}
           DB_PATH: cricket_trading.db
@@ -187,6 +195,13 @@ jobs:
           "
         env:
           MIMO_API_KEY: ${{ secrets.MIMO_API_KEY }}
+          MIMO_MODEL: mimo-v2-omni
+          MIMO_BASE_URL: https://token-plan-sgp.xiaomimimo.com/v1
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: gemini-2.5-flash
           GROK_API_KEY: ${{ secrets.GROK_API_KEY }}
+          GROK_MODEL: grok-3-mini
+          GROK_BASE_URL: https://api.x.ai/v1
           NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+          NVIDIA_MODEL: deepseek-ai/deepseek-v4-pro
+          NVIDIA_BASE_URL: https://integrate.api.nvidia.com/v1
