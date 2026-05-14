@@ -137,14 +137,23 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run demo test
+      - name: Run demo test (statistical + AI ensemble)
         run: |
           python -c "
           import asyncio
-          from config import MIMO_API_KEY, GEMINI_API_KEY, GROK_API_KEY
+          from config import MIMO_API_KEY, GEMINI_API_KEY, GROK_API_KEY, NVIDIA_API_KEY
+          from statistical_model import statistical_match_winner, combined_prediction
           from ai_ensemble import get_ensemble_prediction
 
           async def test():
+              # Test statistical model
+              stat = statistical_match_winner('Delhi Capitals', 'Kolkata Knight Riders', 1.75, 2.10, 'Arun Jaitley Stadium')
+              print('Statistical model:')
+              print('  Probability:', stat['statistical_prob'])
+              print('  Edge:', stat['edge'])
+              print('  Confidence:', stat['confidence'])
+
+              # Test AI ensemble
               result = await get_ensemble_prediction(
                   match_name='DC v KKR',
                   home_team='Delhi Capitals',
@@ -152,17 +161,26 @@ jobs:
                   venue='Arun Jaitley Stadium',
                   market_type='match_winner',
                   selection='Delhi Capitals',
-                  odds=1.85,
+                  odds=1.75,
                   venue_stats={'avg_1st': 170, 'powerplay': 52, 'death': 48, 'spin_friendly': False},
                   team_stats={'home_avg': 168, 'away_avg': 175, 'h2h': 'DC 12-15 KKR (27 matches)'}
               )
-              print('Ensemble probability:', result['ensemble_prob'])
-              print('Consensus:', result['consensus_score'])
-              print('Models agreed:', result['models_agreed'], '/', result['models_total'])
-              print('Edge:', result.get('edge', 0))
+              print('AI Ensemble:')
+              print('  Probability:', result['ensemble_prob'])
+              print('  Consensus:', result['consensus_score'])
+              print('  Models:', result['models_agreed'], '/', result['models_total'])
               for pred in result.get('predictions', []):
-                  print('  ', pred['model_name'], ':', pred['predicted_prob'], '(conf:', pred['confidence'], ')')
-              assert result['models_total'] >= 1, 'At least 1 model must respond'
+                  print('    ', pred['model_name'], ':', pred['predicted_prob'], '(conf:', pred['confidence'], ')')
+
+              # Test combined prediction
+              combined = combined_prediction(result, stat)
+              print('Combined:')
+              print('  Probability:', combined['ensemble_prob'])
+              print('  Edge:', combined['edge'])
+              print('  Should trade:', combined['should_trade'])
+              print('  Models agreed:', combined['models_agreed'], '/', combined['models_total'])
+              assert combined['models_total'] >= 1, 'At least 1 model must respond'
+              assert 0 < combined['ensemble_prob'] < 1, 'Invalid probability'
               print('Demo test passed!')
 
           asyncio.run(test())

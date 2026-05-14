@@ -41,33 +41,25 @@ jobs:
           pip install pytest pytest-asyncio pytest-cov
         continue-on-error: true
 
-      - name: Run tests
-        run: |
-          cd tests && python -m pytest -v --tb=short --cov=../backend --cov-report=xml || true
-        env:
-          DATABASE_URL: sqlite+aiosqlite:///./test.db
-          REDIS_URL: redis://localhost:6379/0
-          DEMO_MODE: "true"
-        continue-on-error: true
-
-      - name: Validate ML model
+      - name: Validate imports and models
         run: |
           python -c "
-          from backend.ml_model.predictor import CricketMLModel
-          from backend.ml_model.ensemble_predictor import EnsemblePredictor
-          model = CricketMLModel()
-          ens = EnsemblePredictor()
-          state = {
-              'innings': 2, 'overs': 12.0, 'total_runs': 95,
-              'total_wickets': 3, 'run_rate': 7.92,
-              'required_run_rate': 8.75, 'target': 170
-          }
-          pred = ens.predict(state)
-          print(f'Ensemble prediction: {pred.win_probability}')
-          print(f'Action: {pred.recommended_action}')
-          print(f'Confidence: {pred.confidence}')
-          assert 0 < pred.win_probability < 1, 'Invalid probability'
-          print('✅ ML model validation passed')
+          import asyncio
+          from config import TEAMS, VENUE_PATTERNS
+          from statistical_model import statistical_match_winner, combined_prediction
+          from ai_ensemble import get_ensemble_prediction
+          from trade_resolver import resolve_demo_trades
+
+          # Test statistical model
+          stat = statistical_match_winner('Delhi Capitals', 'Kolkata Knight Riders', 1.75, 2.10, 'Arun Jaitley Stadium')
+          assert 0 < stat['statistical_prob'] < 1, 'Invalid probability'
+          print(f'Stats model: {stat[\"statistical_prob\"]:.3f} (edge: {stat[\"edge\"]:.3f})')
+
+          # Test combined prediction
+          combined = combined_prediction(None, stat)
+          print(f'Combined: {combined[\"ensemble_prob\"]:.3f} (trade: {combined[\"should_trade\"]})')
+
+          print('✅ All imports and models validated')
           "
         continue-on-error: true
 

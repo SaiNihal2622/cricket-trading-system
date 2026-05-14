@@ -2,10 +2,14 @@
 
 This script is designed to run inside GitHub Actions. It:
 1. Runs the trading engine for a configurable duration
-2. Scans for IPL matches and makes predictions
-3. Logs everything to stdout (visible in Actions logs)
-4. Saves results to SQLite database (uploaded as artifact)
-5. Sends Telegram notifications for trades
+2. Scans for IPL matches and makes predictions using AI ensemble + statistical model
+3. Auto-resolves demo trades using live cricket scores
+4. Logs everything to stdout (visible in Actions logs)
+5. Saves results to SQLite database (uploaded as artifact)
+6. Sends Telegram notifications for trades
+
+AI Models: MIMO + Gemini + Grok + NVIDIA
+Prediction: Statistical baseline + AI ensemble (targeting 80%+ demo accuracy)
 """
 import asyncio
 import os
@@ -55,7 +59,7 @@ def init_cloud_db():
 
 
 async def run_trading_cycle():
-    """Run a single trading cycle."""
+    """Run a single trading cycle: scan matches, evaluate markets, take trades."""
     try:
         from trading_engine import scan_and_trade
         await scan_and_trade()
@@ -63,6 +67,20 @@ async def run_trading_cycle():
         log(f"Trading cycle error: {e}")
         import traceback
         traceback.print_exc()
+
+
+async def resolve_pending_trades():
+    """Try to resolve any pending/open demo trades."""
+    try:
+        from trade_resolver import resolve_demo_trades
+        result = await resolve_demo_trades()
+        if result.get("resolved", 0) > 0:
+            log(f"✅ Resolved {result['resolved']} trades: "
+                f"{result['won']}W / {result['lost']}L / {result['void']}V")
+            return result
+    except Exception as e:
+        log(f"Trade resolution error: {e}")
+    return {"resolved": 0, "won": 0, "lost": 0, "void": 0}
 
 
 def get_session_stats():
@@ -86,6 +104,14 @@ def get_session_stats():
             "FROM trades WHERE mode=? AND status IN ('won','lost')", (TRADING_MODE,)
         ).fetchone()
         
+        # Get model performance
+        model_stats = conn.execute(
+            "SELECT model_name, COUNT(*) as total, "
+            "SUM(CASE WHEN outcome='won' THEN 1 ELSE 0 END) as won "
+            "FROM predictions WHERE outcome IS NOT NULL "
+            "GROUP BY model_name ORDER BY won*1.0/total DESC"
+        ).fetchall()
+        
         conn.close()
         
         total = trades["total"] or 0
@@ -101,10 +127,11 @@ def get_session_stats():
             "open": trades["open"] or 0,
             "pnl": pnl,
             "accuracy": accuracy,
+            "model_performance": [dict(m) for m in model_stats] if model_stats else [],
         }
     except Exception as e:
         log(f"Stats error: {e}")
-        return {"total_trades": 0, "won": 0, "lost": 0, "open": 0, "pnl": 0, "accuracy": 0}
+        return {"total_trades": 0, "won": 0, "lost": 0, "open": 0, "pnl": 0, "accuracy": 0, "model_performance": []}
 
 
 async def main():
@@ -135,16 +162,22 @@ async def main():
         models.append("Grok")
     if NVIDIA_API_KEY:
         models.append("NVIDIA")
-    log(f"🤖 AI Models available: {', '.join(models) if models else 'NONE'}")
+    log(f"🤖 AI Models available: {', '.join(models) if models else 'NONE (statistical only)'}")
+    log(f"📈 Prediction: Statistical baseline + AI ensemble")
+    log(f"🎯 Target accuracy: 80%+ in demo mode")
     
     # Notify start
     await send_telegram(
         f"🏏 <b>Trading Session Started</b>\n"
         f"Mode: {TRADING_MODE.upper()}\n"
         f"Duration: {DURATION_HOURS}h\n"
-        f"Models: {', '.join(models)}\n"
-        f"Interval: {SCAN_INTERVAL}s"
+        f"Models: {', '.join(models) if models else 'Statistical only'}\n"
+        f"Interval: {SCAN_INTERVAL}s\n"
+        f"Target: 80%+ accuracy"
     )
+    
+    # Initial resolve of any old pending trades
+    await resolve_pending_trades()
     
     cycle = 0
     total_trades = 0
@@ -155,19 +188,23 @@ async def main():
         
         log(f"\n--- Cycle {cycle} | {remaining:.0f} min remaining ---")
         
+        # 1. Run trading cycle (scan + evaluate + trade)
         try:
             await run_trading_cycle()
         except Exception as e:
             log(f"Cycle {cycle} failed: {e}")
         
-        # Get stats
+        # 2. Try to resolve pending trades
+        await resolve_pending_trades()
+        
+        # 3. Get stats
         stats = get_session_stats()
         if stats["total_trades"] > total_trades:
             new_trades = stats["total_trades"] - total_trades
             total_trades = stats["total_trades"]
             log(f"📊 New trades: {new_trades} | Total: {total_trades} | "
                 f"Won: {stats['won']} | Lost: {stats['lost']} | "
-                f"Accuracy: {stats['accuracy']:.1%}")
+                f"Accuracy: {stats['accuracy']:.1%} | P&L: {stats['pnl']:.2f}")
             
             # Notify on new trades
             await send_telegram(
@@ -177,6 +214,9 @@ async def main():
                 f"Accuracy: {stats['accuracy']:.1%}\n"
                 f"P&L: {stats['pnl']:.2f}"
             )
+        else:
+            log(f"📊 Stats: {stats['total_trades']} trades | "
+                f"Accuracy: {stats['accuracy']:.1%} | Open: {stats['open']}")
         
         # Wait for next cycle
         if remaining > 1:
@@ -185,6 +225,10 @@ async def main():
             await asyncio.sleep(wait_time)
         else:
             break
+    
+    # Final resolve attempt
+    log("\n🔄 Final trade resolution...")
+    final_resolve = await resolve_pending_trades()
     
     # Final summary
     final_stats = get_session_stats()
@@ -196,6 +240,15 @@ async def main():
     log(f"   Open: {final_stats['open']}")
     log(f"   Accuracy: {final_stats['accuracy']:.1%}")
     log(f"   P&L: {final_stats['pnl']:.2f}")
+    log(f"   Cycles: {cycle}")
+    
+    # Show model performance if available
+    if final_stats.get("model_performance"):
+        log("\n   Model Performance:")
+        for m in final_stats["model_performance"]:
+            acc = m.get("won", 0) / max(1, m.get("total", 1))
+            log(f"     {m['model_name']}: {acc:.1%} ({m.get('won', 0)}/{m.get('total', 0)})")
+    
     log("=" * 60)
     
     # Save final report
@@ -206,19 +259,24 @@ async def main():
         "models": models,
         "stats": final_stats,
         "cycles": cycle,
+        "final_resolve": final_resolve,
     }
-    with open("trading_log_" + start_time.strftime("%Y%m%d_%H%M%S") + ".json", "w") as f:
+    report_file = "trading_log_" + start_time.strftime("%Y%m%d_%H%M%S") + ".json"
+    with open(report_file, "w") as f:
         json.dump(report, f, indent=2)
+    log(f"📄 Report saved: {report_file}")
     
     # Final Telegram notification
+    accuracy_str = f"{final_stats['accuracy']:.1%}"
     await send_telegram(
         f"🏏 <b>Session Complete</b>\n"
         f"Duration: {DURATION_HOURS}h\n"
         f"Trades: {final_stats['total_trades']}\n"
         f"Won: {final_stats['won']} | Lost: {final_stats['lost']}\n"
-        f"Accuracy: {final_stats['accuracy']:.1%}\n"
+        f"Accuracy: {accuracy_str}\n"
         f"P&L: {final_stats['pnl']:.2f}\n"
-        f"Cycles: {cycle}"
+        f"Cycles: {cycle}\n"
+        f"Models: {', '.join(models)}"
     )
     
     log("Done! Results saved as artifact.")

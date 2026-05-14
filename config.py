@@ -7,9 +7,9 @@ load_dotenv()
 # ── Trading Mode ──────────────────────────────────────────────
 TRADING_MODE = os.getenv("TRADING_MODE", "demo")  # "demo" or "live"
 MAX_BET_SIZE = float(os.getenv("MAX_BET_SIZE", "2.0"))
-MIN_CONFIDENCE = float(os.getenv("MIN_CONFIDENCE", "0.65"))
+MIN_CONFIDENCE = float(os.getenv("MIN_CONFIDENCE", "0.60"))
 KELLY_FRACTION = float(os.getenv("KELLY_FRACTION", "0.25"))
-MIN_EDGE = float(os.getenv("MIN_EDGE", "0.05"))
+MIN_EDGE = float(os.getenv("MIN_EDGE", "0.08"))  # 8% minimum edge required
 
 # ── API Keys ──────────────────────────────────────────────────
 CLOUDBET_API_KEY = os.getenv("CLOUDBET_API_KEY", "")
