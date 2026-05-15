@@ -68,8 +68,10 @@ jobs:
           GROK_API_KEY: ${{ secrets.GROK_API_KEY }}
           GROK_MODEL: grok-3-mini
           GROK_BASE_URL: https://api.x.ai/v1
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          GROQ_MODEL: llama-3.3-70b-versatile
           NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
-          NVIDIA_MODEL: deepseek-ai/deepseek-v4-pro
+          NVIDIA_MODEL: deepseek-ai/deepseek-v4-flash
           NVIDIA_BASE_URL: https://integrate.api.nvidia.com/v1
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           CLOUDBET_API_KEY: ${{ secrets.CLOUDBET_API_KEY }}
@@ -202,6 +204,8 @@ jobs:
           GROK_API_KEY: ${{ secrets.GROK_API_KEY }}
           GROK_MODEL: grok-3-mini
           GROK_BASE_URL: https://api.x.ai/v1
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          GROQ_MODEL: llama-3.3-70b-versatile
           NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
-          NVIDIA_MODEL: deepseek-ai/deepseek-v4-pro
+          NVIDIA_MODEL: deepseek-ai/deepseek-v4-flash
           NVIDIA_BASE_URL: https://integrate.api.nvidia.com/v1

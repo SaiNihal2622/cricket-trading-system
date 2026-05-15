@@ -304,14 +304,15 @@ def combined_prediction(
 ) -> dict:
     """
     Combine AI ensemble prediction with statistical model.
-    This is the key to achieving 80%+ accuracy.
+    Key to achieving 80%+ accuracy through SELECTIVE trading.
     
-    Strategy:
+    Strategy (conservative):
     - Statistical model provides baseline (more reliable for simple markets)
     - AI models add nuance (weather, injuries, form, momentum)
-    - When they agree: high confidence
-    - When they disagree: use the one with higher confidence
-    - Never trade when both suggest negative edge
+    - When they AGREE on direction: high confidence → trade
+    - When they DISAGREE: NO TRADE (skip uncertain setups)
+    - Only trade with strong edge (>8%) AND model consensus
+    - Prefer FALSE NEGATIVES over FALSE POSITIVES (miss trades, don't lose money)
     """
     stat_prob = stat_result.get("statistical_prob", 0.5)
     stat_conf = stat_result.get("confidence", 0.5)
@@ -324,50 +325,85 @@ def combined_prediction(
         models_total = ai_ensemble_result.get("models_total", 0)
         models_agreed = ai_ensemble_result.get("models_agreed", 0)
         
-        # Weight: stat model gets more weight with fewer AI models
-        if models_total >= 3 and models_agreed >= 2:
-            ai_weight = 0.45
-            stat_weight = 0.55
-        elif models_total >= 2:
+        # ── DIRECTION AGREEMENT CHECK ──
+        # Both must agree the edge is POSITIVE in the same direction
+        stat_positive = stat_edge > 0.02  # stat model sees value
+        ai_positive = ai_edge > 0.02      # AI models see value
+        both_agree = stat_positive and ai_positive
+        
+        # ── WEIGHTED ENSEMBLE ──
+        # Statistical model gets MORE weight (it's more consistent)
+        if models_total >= 3 and models_agreed >= 2 and both_agree:
             ai_weight = 0.35
             stat_weight = 0.65
+        elif models_total >= 2 and both_agree:
+            ai_weight = 0.30
+            stat_weight = 0.70
         else:
-            ai_weight = 0.25
-            stat_weight = 0.75
+            ai_weight = 0.20
+            stat_weight = 0.80
         
-        # Consensus bonus: when both agree, boost confidence
-        agreement = 1.0 - abs(stat_prob - ai_prob)
-        consensus_bonus = max(0, (agreement - 0.7) * 0.5)  # Bonus when >70% agreement
-        
+        # Blend probabilities
         combined_prob = (stat_weight * stat_prob) + (ai_weight * ai_prob)
+        
+        # ── CONSENSUS SCORING ──
+        # Agreement between stat and AI models
+        agreement = 1.0 - abs(stat_prob - ai_prob)
+        
+        # Model-to-model agreement (within AI ensemble)
+        consensus_bonus = 0.0
+        if both_agree and agreement > 0.85:
+            consensus_bonus = 0.10  # Strong agreement → boost confidence
+        elif both_agree and agreement > 0.70:
+            consensus_bonus = 0.05
+        
         combined_conf = (stat_weight * stat_conf) + (ai_weight * ai_conf) + consensus_bonus
-        combined_edge = combined_prob - (1.0 / (1.0 + stat_edge + (1.0/stat_prob - 1.0)))
         
-        # Recalculate edge properly
-        # The implied probability from odds
-        if ai_ensemble_result.get("edge") is not None:
-            # Use the actual edge calculation from ensemble
-            implied = ai_prob - ai_edge  # back-calculate implied
-            combined_edge = combined_prob - implied
+        # ── EDGE CALCULATION ──
+        # Use the AVERAGE edge when both agree, otherwise use stat edge
+        if both_agree:
+            combined_edge = (stat_weight * stat_edge) + (ai_weight * ai_edge)
+        else:
+            # Disagreement → reduce edge significantly (penalize uncertainty)
+            combined_edge = stat_edge * 0.5 + ai_edge * 0.3
         
-        # Use statistical edge as primary reference
-        combined_edge = (stat_weight * stat_edge) + (ai_weight * ai_edge)
+        # ── DISAGREEMENT PENALTY ──
+        # If models disagree on direction, NO TRADE
+        if not both_agree:
+            combined_conf *= 0.7  # Penalize confidence heavily
         
-        reasoning = f"Stat: {stat_prob:.1%} (conf:{stat_conf:.1%}) + AI: {ai_prob:.1%} ({models_agreed}/{models_total} agreed)"
+        models_dir = "AGREE" if both_agree else "DISAGREE"
+        reasoning = f"Stat: {stat_prob:.1%} (e:{stat_edge:+.1%}) | AI: {ai_prob:.1%} (e:{ai_edge:+.1%}) | {models_dir} ({models_agreed}/{models_total} AI agree)"
     else:
-        # No AI models available - statistical only
+        # No AI models available - statistical only, higher bar
         combined_prob = stat_prob
-        combined_conf = stat_conf * 0.9  # Slightly lower without AI corroboration
+        combined_conf = stat_conf * 0.85  # Lower without AI corroboration
         combined_edge = stat_edge
-        reasoning = f"Statistical only: {stat_prob:.1%}"
+        both_agree = True  # No AI to disagree with
+        reasoning = f"Statistical only: {stat_prob:.1%} (edge: {stat_edge:+.1%})"
     
     combined_conf = max(0.1, min(0.95, combined_conf))
     
-    # Decision
-    should_trade = (
-        combined_edge >= min_edge
-        and combined_conf >= min_confidence
-    )
+    # ── TRADE DECISION (CONSERVATIVE) ──
+    # Requirements for a trade:
+    # 1. Positive edge >= min_edge (8%)
+    # 2. Confidence >= min_confidence (60%)
+    # 3. If AI models available, they must agree with stat model direction
+    # 4. For close calls (edge < 12%), require higher confidence (70%+)
+    
+    edge_passes = combined_edge >= min_edge
+    conf_passes = combined_conf >= min_confidence
+    consensus_passes = both_agree  # Must agree on direction
+    
+    # For marginal edges, require extra confidence
+    if combined_edge < 0.12:
+        conf_passes = combined_conf >= 0.70
+    
+    # For very strong edges, relax confidence slightly
+    if combined_edge >= 0.15:
+        conf_passes = combined_conf >= 0.55
+    
+    should_trade = edge_passes and conf_passes and consensus_passes
     
     return {
         "ensemble_prob": round(combined_prob, 4),
@@ -378,4 +414,5 @@ def combined_prediction(
         "should_trade": should_trade,
         "reasoning": reasoning,
         "stat_component": stat_result,
+        "both_agree": both_agree,
     }

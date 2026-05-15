@@ -1,6 +1,6 @@
 """Multi-model AI ensemble for cricket match predictions.
 
-Uses NVIDIA Nemotron (via MIMO), Gemini, and Grok to generate predictions.
+Uses NVIDIA Nemotron, MiMo, Gemini, and Grok to generate predictions.
 Each model independently analyzes the match data and returns a probability.
 The ensemble combines them using weighted averaging based on historical accuracy.
 """
@@ -25,12 +25,15 @@ GROQ_BASE_URL_2 = "https://api.groq.com/openai/v1"
 GROQ_MODEL_NAME = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
 
 # Model weights (updated dynamically based on performance)
+# Prioritize proven working models: MiMo (best reasoning) + Groq (fast/reliable)
+# NVIDIA/Gemini/Grok get fallback weight
 MODEL_WEIGHTS = {
-    "nvidia_nemotron": 0.20,
-    "gemini_flash": 0.20,
-    "grok_3": 0.15,
-    "mimo_omni": 0.25,
-    "groq_llama": 0.20,
+    "nvidia_nemotron": 0.15,
+    "mimo_omni": 0.35,
+    "gemini_flash": 0.10,
+    "grok_3": 0.05,
+    "groq_llama": 0.25,
+    "openai_gpt4o_mini": 0.10,
 }
 
 SYSTEM_PROMPT = """You are an expert cricket betting analyst for IPL matches. 
@@ -64,8 +67,8 @@ async def call_nvidia(prompt: str) -> Optional[dict]:
     
     for model_id in models_to_try:
         try:
-            # Reasoning models (deepseek-v4-flash, deepseek-r1) need more time
-            timeout = 90 if "deepseek" in model_id or "r1" in model_id else 60
+            # Reasoning models need more time, but cap at 45s to avoid blocking
+            timeout = 45 if "deepseek" in model_id or "r1" in model_id else 30
             async with httpx.AsyncClient(timeout=timeout) as client:
                 resp = await client.post(
                     f"{NVIDIA_BASE_URL}/chat/completions",
@@ -102,18 +105,37 @@ async def call_nvidia(prompt: str) -> Optional[dict]:
 
 
 async def call_gemini(prompt: str) -> Optional[dict]:
-    """Call Gemini via Google AI API."""
+    """Call Gemini via Google AI API (uses new google.genai package)."""
     if not GEMINI_API_KEY:
         return None
     try:
-        import google.generativeai as genai
-        genai.configure(api_key=GEMINI_API_KEY)
-        model = genai.GenerativeModel(GEMINI_MODEL)
+        # Try new google.genai package first (recommended)
+        try:
+            from google import genai
+            client = genai.Client(api_key=GEMINI_API_KEY)
+            full_prompt = f"{SYSTEM_PROMPT}\n\n{prompt}"
+            resp = await asyncio.to_thread(
+                client.models.generate_content,
+                model=GEMINI_MODEL,
+                contents=full_prompt,
+                config=genai.types.GenerateContentConfig(
+                    temperature=0.3,
+                    max_output_tokens=500,
+                ),
+            )
+            return _parse_response(resp.text, "gemini_flash")
+        except ImportError:
+            pass
+        
+        # Fallback to deprecated google.generativeai
+        import google.generativeai as genai_old
+        genai_old.configure(api_key=GEMINI_API_KEY)
+        model = genai_old.GenerativeModel(GEMINI_MODEL)
         
         full_prompt = f"{SYSTEM_PROMPT}\n\n{prompt}"
         resp = await asyncio.to_thread(
             model.generate_content, full_prompt,
-            generation_config=genai.types.GenerationConfig(
+            generation_config=genai_old.types.GenerationConfig(
                 temperature=0.3, max_output_tokens=500
             )
         )
@@ -145,9 +167,13 @@ async def call_grok(prompt: str) -> Optional[dict]:
                     "max_tokens": 500,
                 },
             )
-            data = resp.json()
-            content = data["choices"][0]["message"]["content"]
-            return _parse_response(content, "grok_3")
+            if resp.status_code == 200:
+                data = resp.json()
+                content = data["choices"][0]["message"]["content"]
+                return _parse_response(content, "grok_3")
+            else:
+                print(f"[Grok] Error {resp.status_code}: {resp.text[:200]}")
+                return None
     except Exception as e:
         print(f"[Grok] Error: {e}")
         return None
@@ -158,31 +184,46 @@ async def call_groq(prompt: str) -> Optional[dict]:
     if not GROQ_API_KEY_2:
         return None
     try:
-        async with httpx.AsyncClient(timeout=20) as client:
-            resp = await client.post(
-                f"{GROQ_BASE_URL_2}/chat/completions",
-                headers={
-                    "Authorization": f"Bearer {GROQ_API_KEY_2}",
-                    "Content-Type": "application/json",
-                },
-                json={
-                    "model": GROQ_MODEL_NAME,
-                    "messages": [
-                        {"role": "system", "content": SYSTEM_PROMPT},
-                        {"role": "user", "content": prompt},
-                    ],
-                    "temperature": 0.3,
-                    "max_tokens": 500,
-                },
-            )
-            if resp.status_code == 200:
-                data = resp.json()
-                content = data["choices"][0]["message"]["content"]
-                print(f"[Groq] Using {GROQ_MODEL_NAME}")
-                return _parse_response(content, "groq_llama")
-            else:
-                print(f"[Groq] Error {resp.status_code}: {resp.text[:200]}")
-                return None
+        # Try smaller model first to avoid rate limits
+        models_to_try = [
+            "llama-3.1-8b-instant",  # Smaller, less rate-limited
+            GROQ_MODEL_NAME,
+            "mixtral-8x7b-32768",
+        ]
+        for model_name in models_to_try:
+            try:
+                async with httpx.AsyncClient(timeout=20) as client:
+                    resp = await client.post(
+                        f"{GROQ_BASE_URL_2}/chat/completions",
+                        headers={
+                            "Authorization": f"Bearer {GROQ_API_KEY_2}",
+                            "Content-Type": "application/json",
+                        },
+                        json={
+                            "model": model_name,
+                            "messages": [
+                                {"role": "system", "content": SYSTEM_PROMPT},
+                                {"role": "user", "content": prompt},
+                            ],
+                            "temperature": 0.3,
+                            "max_tokens": 500,
+                        },
+                    )
+                    if resp.status_code == 200:
+                        data = resp.json()
+                        content = data["choices"][0]["message"]["content"]
+                        print(f"[Groq] Using {model_name}")
+                        return _parse_response(content, "groq_llama")
+                    elif resp.status_code == 429:
+                        print(f"[Groq] Rate limited on {model_name}, trying next...")
+                        continue
+                    else:
+                        print(f"[Groq] Error {resp.status_code}: {resp.text[:200]}")
+                        return None
+            except Exception as e:
+                print(f"[Groq] {model_name} error: {e}")
+                continue
+        return None
     except Exception as e:
         print(f"[Groq] Error: {e}")
         return None
@@ -428,11 +469,11 @@ async def get_ensemble_prediction(
             "reasoning": "No AI models available, using statistical model only",
         }
     
-    # Weighted ensemble
+    # Weighted ensemble - weight by model base weight * confidence
     total_weight = 0
     weighted_prob = 0
     for pred in predictions:
-        w = MODEL_WEIGHTS.get(pred["model_name"], 0.25) * pred["confidence"]
+        w = MODEL_WEIGHTS.get(pred["model_name"], 0.15) * pred["confidence"]
         weighted_prob += pred["predicted_prob"] * w
         total_weight += w
     
@@ -446,7 +487,7 @@ async def get_ensemble_prediction(
         std_dev = variance ** 0.5
         consensus = max(0, 1 - std_dev * 4)  # 0.25 std = 0 consensus
     else:
-        consensus = 0.5
+        consensus = 0.65  # Single model gets moderate confidence
     
     # Count agreements (within 10% of ensemble)
     agreed = sum(1 for p in probs if abs(p - ensemble_prob) < 0.10)
