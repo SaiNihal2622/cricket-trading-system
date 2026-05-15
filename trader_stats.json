@@ -1,7 +1,141 @@
 {
-  "total_trades": 0,
-  "wins": 0,
-  "losses": 0,
-  "total_pnl": 0.0,
-  "accuracy": 0.0
+  "total_trades": 5,
+  "wins": 4,
+  "losses": 1,
+  "total_pnl": 4.1,
+  "accuracy": 80.0,
+  "avg_edge": 37.98,
+  "total_wagered": 7.0,
+  "open_positions": 9,
+  "last_updated": "2026-05-15 08:36:13",
+  "demo_mode": true,
+  "recent_trades": [
+    {
+      "desc": "Powerplay Trade",
+      "edge": 62.9,
+      "amount": 2.0,
+      "result": "WIN",
+      "pnl": 1.7
+    },
+    {
+      "desc": "Over By Over Trade",
+      "edge": 80.0,
+      "amount": 2.0,
+      "result": "WIN",
+      "pnl": 1.7
+    },
+    {
+      "desc": "Player Trade",
+      "edge": 15.8,
+      "amount": 1.0,
+      "result": "WIN",
+      "pnl": 0.85
+    },
+    {
+      "desc": "Player Trade",
+      "edge": 12.7,
+      "amount": 1.0,
+      "result": "LOSS",
+      "pnl": -1.0
+    },
+    {
+      "desc": "Player Trade",
+      "edge": 18.5,
+      "amount": 1.0,
+      "result": "WIN",
+      "pnl": 0.85
+    }
+  ],
+  "system_edge": 70.83,
+  "positions": [
+    {
+      "team": "Chennai Super Kings",
+      "type": "team_totals",
+      "outcome": "over",
+      "odds": 1.85,
+      "amount": 1.19,
+      "status": "OPEN",
+      "reason": "Chennai Super Kings Over 181.5 | base=191.3 form_adj=+0 batter_adj=+0 bowl_adj=-3 => adj_avg=188 vs "
+    },
+    {
+      "team": "Mumbai Indians",
+      "type": "session",
+      "outcome": "under",
+      "odds": 1.85,
+      "amount": 2.0,
+      "status": "OPEN",
+      "reason": "[powerplay] Mumbai Indians Under 89.5 | powerplay base=50 form_adj=+0 => adj=50 vs line=89.5 => p_un"
+    },
+    {
+      "team": "Chennai Super Kings",
+      "type": "session",
+      "outcome": "under",
+      "odds": 1.85,
+      "amount": 2.0,
+      "status": "OPEN",
+      "reason": "[powerplay] Chennai Super Kings Under 87.5 | powerplay base=47 form_adj=+0 => adj=47 vs line=87.5 =>"
+    },
+    {
+      "team": "Mumbai Indians",
+      "type": "session",
+      "outcome": "over",
+      "odds": 1.8,
+      "amount": 2.0,
+      "status": "OPEN",
+      "reason": "[over_by_over] Mumbai Indians Over 6.5 | over_by_over base=86.30000000000001 form_adj=+0 => adj=86 v"
+    },
+    {
+      "team": "Chennai Super Kings",
+      "type": "session",
+      "outcome": "over",
+      "odds": 1.8,
+      "amount": 2.0,
+      "status": "OPEN",
+      "reason": "[over_by_over] Chennai Super Kings Over 6.5 | over_by_over base=95.30000000000001 form_adj=+0 => adj"
+    },
+    {
+      "team": "Chennai Super Kings",
+      "type": "player",
+      "outcome": "over",
+      "odds": 1.85,
+      "amount": 1.0,
+      "status": "OPEN",
+      "reason": "[player] c1a5cf7-rohit-sharma over 24.5 (avg~30) | Kelly=1.00"
+    },
+    {
+      "team": "Chennai Super Kings",
+      "type": "player",
+      "outcome": "over",
+      "odds": 1.85,
+      "amount": 1.0,
+      "status": "OPEN",
+      "reason": "[player] c1a6fef-sanju-samson over 27.5 (avg~32) | Kelly=1.00"
+    },
+    {
+      "team": "Chennai Super Kings",
+      "type": "player",
+      "outcome": "over",
+      "odds": 1.85,
+      "amount": 1.0,
+      "status": "OPEN",
+      "reason": "[player] c1ab09e-sarfaraz-khan over 19.5 (avg~25) | Kelly=1.00"
+    },
+    {
+      "team": "Chennai Super Kings",
+      "type": "player",
+      "outcome": "over",
+      "odds": 1.85,
+      "amount": 1.0,
+      "status": "OPEN",
+      "reason": "[player] c93f37-urvil-patel over 18.5 (avg~25) | Kelly=1.00"
+    }
+  ],
+  "match_info": {
+    "home": "Chennai Super Kings",
+    "away": "Mumbai Indians",
+    "venue": "MA Chidambaram Stadium",
+    "status": "COMPLETED",
+    "score": "CSK: 181/6 (20) | MI: 167/8 (20)",
+    "result": "Chennai Super Kings won by 14 runs"
+  }
 }
