@@ -1,12 +1,16 @@
-"""Check workflow run status."""
-import os
-import requests
+import urllib.request, json
 
-TOKEN = os.environ.get("GH_TOKEN", os.environ.get("GITHUB_TOKEN", ""))
-REPO = "SaiNihal2622/cricket-trading-system"
-headers = {"Authorization": f"token {TOKEN}"}
+url = "https://api.github.com/repos/SaiNihal2622/cricket-trading-system/actions/runs?per_page=5"
+req = urllib.request.Request(url, headers={"User-Agent": "Python"})
+with urllib.request.urlopen(req) as resp:
+    data = json.loads(resp.read())
 
-r = requests.get(f"https://api.github.com/repos/{REPO}/actions/workflows/273285405/runs?per_page=3", headers=headers)
-runs = r.json().get("workflow_runs", [])
-for run in runs:
-    print(f"ID={run['id']} status={run['status']} conclusion={run.get('conclusion', 'N/A')} created={run['created_at']}")
+for r in data.get("workflow_runs", []):
+    print(f"ID: {r['id']}")
+    print(f"  Status: {r['status']} | Conclusion: {r['conclusion']}")
+    print(f"  Created: {r['created_at']}")
+    print(f"  URL: {r['html_url']}")
+    print()
+
+print("Repo: https://github.com/SaiNihal2622/cricket-trading-system")
+print("Actions: https://github.com/SaiNihal2622/cricket-trading-system/actions")

@@ -447,7 +447,7 @@
     <script>
         // CONFIG - LOADED FROM LOCALSTORAGE OR PROMPT
         let GITHUB_TOKEN = localStorage.getItem('GH_TOKEN') || "";
-        const REPO = "SaiNihal2622/ipl-betting-bot";
+        const REPO = "SaiNihal2622/cricket-trading-system";
         const ODDS_API_KEY = "65ec9ad5abeeda6fee791e355810f07c"; // Standardized free tier
 
         if (GITHUB_TOKEN) {
@@ -632,7 +632,7 @@
 
     async function sync() {
         syncTimer = 10;
-        const GITHUB_BASE = 'https://raw.githubusercontent.com/SaiNihal2622/ipl-betting-bot/master';
+        const GITHUB_BASE = 'https://raw.githubusercontent.com/SaiNihal2622/cricket-trading-system/master';
         let stats = { total_trades: 0, wins: 0, losses: 0, total_pnl: 0, accuracy: 0 };
         let logs = "";
         let source = 'LOCAL';
@@ -699,9 +699,6 @@
         if (syncTimer <= 0) sync();
     }, 1000);
     sync();
-</script>
-</body>
-</html>
 </script>
 </body>
 </html>

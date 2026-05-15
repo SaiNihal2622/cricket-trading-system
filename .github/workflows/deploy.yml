@@ -63,7 +63,7 @@ jobs:
           "
         continue-on-error: true
 
-  # ─── Build & Deploy Frontend to GitHub Pages ───────────────────────────────
+  # ─── Deploy Dashboard to GitHub Pages ─────────────────────────────────────
   deploy-pages:
     needs: test
     runs-on: ubuntu-latest
@@ -76,28 +76,18 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Install frontend dependencies
-        working-directory: frontend
-        run: npm install --legacy-peer-deps
-
-      - name: Build frontend
-        working-directory: frontend
-        run: npm run build
-        env:
-          REACT_APP_API_URL: ${{ vars.API_URL || 'https://api.cricket-trading.example.com' }}
-          REACT_APP_WS_URL: ${{ vars.WS_URL || 'wss://ws.cricket-trading.example.com' }}
-          REACT_APP_DEMO_MODE: 'true'
+      - name: Prepare Pages directory
+        run: |
+          mkdir -p _site
+          cp dashboard.html _site/index.html
+          cp trader_stats.json _site/trader_stats.json 2>/dev/null || echo '{}' > _site/trader_stats.json
+          echo "Dashboard prepared for deployment"
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./frontend/build
+          publish_dir: ./_site
           publish_branch: gh-pages
           force_orphan: true
 
